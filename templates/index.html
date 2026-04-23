@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScamShield - SOC Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <main class="page-shell">
+        <section class="hero">
+            <div class="eyebrow">Threat triage for normal people</div>
+            <h1 class="title">ScamShield</h1>
+            <p class="subtitle">
+                Paste any SMS, WhatsApp, email text, or suspicious link. ScamShield scores the risk,
+                explains why it looks dangerous, and gives next steps in plain language.
+            </p>
+        </section>
+
+        <section class="panel">
+            <div class="panel-grid">
+                <div class="scan-column">
+                    <div class="section-header">
+                        <span class="section-kicker">Live Scan</span>
+                        <h2>Analyze a message or link</h2>
+                    </div>
+
+                    <form method="POST" action="/" class="scan-form">
+                        <label for="message" class="form-label">Message or link</label>
+                        <div class="view-toggle">
+                            <label class="view-option">
+                                <input type="radio" name="view_mode" value="simple" {% if view_mode != 'analyst' %}checked{% endif %}>
+                                <span>Simple View</span>
+                            </label>
+                            <label class="view-option">
+                                <input type="radio" name="view_mode" value="analyst" {% if view_mode == 'analyst' %}checked{% endif %}>
+                                <span>Analyst View</span>
+                            </label>
+                        </div>
+                        <textarea id="message" name="message" rows="8" placeholder="Paste the message, email body, WhatsApp text, or URL here...">{{ message }}</textarea>
+                        <div class="button-row">
+                            <button type="submit" class="primary-btn">Quick Scan</button>
+                        </div>
+                    </form>
+
+                    <form method="POST" action="/deep" class="scan-form deep-form">
+                        <input type="hidden" name="message" value="{{ message }}">
+                        <input type="hidden" name="view_mode" value="{{ view_mode }}">
+                        <button type="submit" class="secondary-btn">Deep Scan with VirusTotal</button>
+                    </form>
+
+                    {% if scan_summary %}
+                    <div class="result-card summary-card">
+                        <div class="risk-meter">
+                            <div class="risk-ring">
+                                <span>{{ scan_summary.risk_percent }}%</span>
+                            </div>
+                            <div>
+                                <div class="result-tag">{{ scan_summary.status }}</div>
+                                <h3>{{ scan_summary.scam_type }}</h3>
+                                <p>{{ scan_summary.risk_label }}: {{ scan_summary.risk_percent }}%</p>
+                                <p>{{ scan_summary.confidence_label }}: {{ scan_summary.confidence }}%</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if link_reports %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Link Intelligence</span>
+                            <h2>Domain and reputation signals</h2>
+                        </div>
+                        <div class="result-list">
+                            {% for report in link_reports %}
+                            <article class="link-report {{ report.status }}">
+                                <div class="link-topline">
+                                    <div>
+                                        <h3>{{ report.domain }}</h3>
+                                        <p class="muted">{{ report.url }}</p>
+                                    </div>
+                                    <div class="risk-chip">{{ report.risk_score }}% risk</div>
+                                </div>
+                                <ul class="signal-list">
+                                    {% for reason in report.reasons %}
+                                    <li>{{ reason }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="intel-grid">
+                                    <div class="intel-box">
+                                        <span class="intel-label">URL Expansion</span>
+                                        <p>{{ report.expansion_message }}</p>
+                                        {% if report.expanded_url %}
+                                        <p class="muted">{{ report.expanded_url }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="intel-box">
+                                        <span class="intel-label">Google Safe Browsing</span>
+                                        <p>{{ report.google_safe_browsing }}</p>
+                                    </div>
+                                    <div class="intel-box">
+                                        <span class="intel-label">PhishTank</span>
+                                        <p>{{ report.phishtank }}</p>
+                                    </div>
+                                    <div class="intel-box">
+                                        <span class="intel-label">Domain Age</span>
+                                        <p>{{ report.domain_age_message }}</p>
+                                    </div>
+                                    {% if report.vt_message %}
+                                    <div class="intel-box">
+                                        <span class="intel-label">VirusTotal</span>
+                                        <p>{{ report.vt_message }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if explanation_lines %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Why it was flagged</span>
+                            <h2>Human-readable explanation</h2>
+                        </div>
+                        <ul class="signal-list explanation-list">
+                            {% for line in explanation_lines %}
+                            <li>{{ line }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if explainability %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Explainability</span>
+                            <h2>Top signals behind the score</h2>
+                        </div>
+                        <div class="result-list">
+                            {% for item in explainability %}
+                            <article class="signal-card">
+                                <span class="intel-label">{{ item.source }}</span>
+                                <p>{{ item.detail }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if view_mode == 'analyst' and evidence_breakdown %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Evidence Breakdown</span>
+                            <h2>How the score was built</h2>
+                        </div>
+                        <div class="result-list">
+                            {% for item in evidence_breakdown %}
+                            <article class="signal-card">
+                                <div class="provider-topline">
+                                    <span class="intel-label">{{ item.source }}</span>
+                                    <span class="impact-chip">{{ item.impact }}</span>
+                                </div>
+                                <p>{{ item.label }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if view_mode == 'analyst' and (iocs.urls or iocs.domains or iocs.emails or iocs.phones or iocs.crypto_wallets or iocs.brands) %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">IOC Extraction</span>
+                            <h2>Indicators found in the message</h2>
+                        </div>
+                        <div class="ioc-grid">
+                            {% if iocs.urls %}
+                            <div class="intel-box">
+                                <span class="intel-label">URLs</span>
+                                {% for value in iocs.urls %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if iocs.domains %}
+                            <div class="intel-box">
+                                <span class="intel-label">Domains</span>
+                                {% for value in iocs.domains %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if iocs.emails %}
+                            <div class="intel-box">
+                                <span class="intel-label">Emails</span>
+                                {% for value in iocs.emails %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if iocs.phones %}
+                            <div class="intel-box">
+                                <span class="intel-label">Phone Numbers</span>
+                                {% for value in iocs.phones %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if iocs.crypto_wallets %}
+                            <div class="intel-box">
+                                <span class="intel-label">Crypto Wallets</span>
+                                {% for value in iocs.crypto_wallets %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% if iocs.brands %}
+                            <div class="intel-box">
+                                <span class="intel-label">Brand Mentions</span>
+                                {% for value in iocs.brands %}
+                                <p>{{ value }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if recommended_actions %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Recommended Response</span>
+                            <h2>What to do next</h2>
+                        </div>
+                        <div class="action-grid">
+                            {% for action in recommended_actions %}
+                            <article class="action-card">
+                                <h3>{{ action.label }}</h3>
+                                <p>{{ action.detail }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if deep_results %}
+                    <div class="result-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Deep Scan</span>
+                            <h2>VirusTotal results</h2>
+                        </div>
+                        <div class="result-list">
+                            {% for result in deep_results %}
+                            <article class="link-report medium-risk">
+                                <div class="link-topline">
+                                    <div>
+                                        <h3>{{ result.status }}</h3>
+                                        <p class="muted">{{ result.url }}</p>
+                                    </div>
+                                </div>
+                                <p>{{ result.message }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <aside class="intel-column">
+                    <div class="info-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Provider Status</span>
+                            <h2>External intelligence availability</h2>
+                        </div>
+                        <div class="provider-list">
+                            {% for provider in provider_statuses %}
+                            <article class="provider-card {{ provider.severity }}">
+                                <div class="provider-topline">
+                                    <h3>{{ provider.name }}</h3>
+                                    <span class="provider-badge">{{ provider.status }}</span>
+                                </div>
+                                <p>{{ provider.detail }}</p>
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Privacy</span>
+                            <h2>Logging and data handling</h2>
+                        </div>
+                        {% for note in privacy_notes %}
+                        <div class="example-group">
+                            <h3>{{ note.title }}</h3>
+                            <p>{{ note.body }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="info-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Examples</span>
+                            <h2>Suspicious patterns</h2>
+                        </div>
+                        {% for category, examples in scam_examples.items() %}
+                        <div class="example-group">
+                            <h3>{{ category }}</h3>
+                            {% for example in examples %}
+                            <p>{{ example }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="info-card">
+                        <div class="section-header compact">
+                            <span class="section-kicker">Benign messages</span>
+                            <h2>Normal-looking examples</h2>
+                        </div>
+                        {% for example in safe_examples %}
+                        <p>{{ example }}</p>
+                        {% endfor %}
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

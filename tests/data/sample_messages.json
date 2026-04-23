@@ -1,0 +1,282 @@
+[
+  {
+    "id": "user_scam_01",
+    "input": "Hello. The product is pre-owned but in good condition. Visit our online store for more details about the color, model, and specifications. https://xmisli.com/products/item-details If you have questions, customer service will assist.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized user-provided scam sample with suspicious shopping domain and push to external product page.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_02",
+    "input": "Your Apple Account information has been updated. A charge of 459 USD was made via ApplePay. If you did not authorize this, review your Apple Account immediately at https://account.apple.com and contact support.",
+    "expected_category": "Bank Scam",
+    "expected_risk": "medium",
+    "notes": "Sanitized user-provided Apple billing scare message.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_03",
+    "input": "Periodic review complete. You have a document awaiting review. Access it here: https://crgxrl.com/review Reply STOP to opt-out.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized review lure using generic business-document wording and suspicious domain.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_04",
+    "input": "Hi, found your email from your creator page. We are onboarding a small group of TikTok creators onto a new platform and offering early access plus $50 just for joining. Reply and I will send the link.",
+    "expected_category": "Social Engineering / Recruitment Scam",
+    "expected_risk": "medium",
+    "notes": "Sanitized creator recruitment lure with reward incentive.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_05",
+    "input": "Your cloud account may be deactivated due to non-payment. Your storage is full and your photos, contacts, and documents are no longer being backed up. Update your payment information within 3 days to avoid permanent deletion.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized cloud payment decline scare.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_06",
+    "input": "You received $220 with Zelle. Account on hold. We are unable to credit your funds because your account is not a business user and this amount is above your limit.",
+    "expected_category": "Bank Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized fake payment hold message.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_07",
+    "input": "FedEx shipment in process. One day shipping for a Nintendo console. Total due: $115.25. Pay the handling fee and insurance charge to release the package.",
+    "expected_category": "Parcel Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized delivery-payment scam sample.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_08",
+    "input": "Popular creator account announcement: I'm launching a crypto casino and giving every new user a $2,500 bonus. Register at merwex-casino.com, enter promo code GIFT, and withdraw instantly. This post will be deleted soon, so don't miss it.",
+    "expected_category": "Crypto Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized fake celebrity endorsement combined with crypto-gambling bonus bait and urgency.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_09",
+    "input": "We reviewed your resume and although the original position has been filled, we think you would be a great fit for another remote role. Please schedule a meeting with our founder to discuss the job, pay, and company here: https://calendly.example-demo-link.com/remote-role and reply once you have booked a time.",
+    "expected_category": "Social Engineering / Recruitment Scam",
+    "expected_risk": "medium",
+    "notes": "Sanitized hiring lure using authority, scheduling pressure, and a meeting-booking link.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_10",
+    "input": "Dear user, your withdrawal of 1370 USDT is under review. Under anti-money laundering rules, you must first pay a 10% deposit before your withdrawal can be released. Complete the deposit within 48 hours or your account will be frozen.",
+    "expected_category": "Crypto Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized crypto withdrawal scam using AML wording and an advance-fee demand.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_11",
+    "input": "Trading pair: BTC/USDT. Signal period: 60 seconds. Prediction: CALL. Buy 1% of your account balance now.",
+    "expected_category": "Crypto Scam",
+    "expected_risk": "medium",
+    "notes": "Sanitized trading-signal lure pushing speculative action without context.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_12",
+    "input": "Your application for a remote data entry position has been reviewed and we would like to invite you to an online interview. This role pays $27.25 per hour and includes paid training. If you are interested, reply YES to continue.",
+    "expected_category": "Job Scam",
+    "expected_risk": "medium",
+    "notes": "Sanitized remote-job lure using a simple YES reply flow and attractive pay.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "user_scam_13",
+    "input": "Marketplace buyer: Can you pay half now so I can mark the item as sold? I cannot use PayPal. Can you buy an Apple gift card online instead and send the code now?",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Sanitized marketplace payment scam pivoting to gift cards instead of normal payment methods.",
+    "source": "user_upload_sanitized"
+  },
+  {
+    "id": "crafted_scam_01",
+    "input": "Your PayPal account has been limited due to unusual activity. Verify your account now at http://paypaI-security-login.com to avoid suspension.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Lookalike brand domain, urgency, credential lure.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_02",
+    "input": "Bank alert: unauthorized transaction detected. Confirm the payment immediately at http://secure-bank-login-verification.com/login.",
+    "expected_category": "Bank Scam",
+    "expected_risk": "high",
+    "notes": "Fraud alert plus direct login link.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_03",
+    "input": "Your package could not be delivered. Pay the delivery fee now and confirm your address: https://parcel-track-update.top/verify",
+    "expected_category": "Parcel Scam",
+    "expected_risk": "high",
+    "notes": "Parcel + fee + address confirmation + suspicious TLD.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_04",
+    "input": "Earn money quickly from home. No experience needed. Message our recruiter on Telegram and pay a small processing fee to start today.",
+    "expected_category": "Job Scam",
+    "expected_risk": "high",
+    "notes": "Job bait + Telegram + fee request.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_05",
+    "input": "Claim your exclusive airdrop now. Connect your wallet and enter your recovery phrase to receive bonus tokens.",
+    "expected_category": "Crypto Scam",
+    "expected_risk": "high",
+    "notes": "Wallet connection + recovery phrase.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_06",
+    "input": "Final notice: your account will be locked today. Click the link below to confirm your one-time code and keep access.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Urgency + click + OTP ask.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_07",
+    "input": "Steam security team: we detected suspicious logins. Visit http://steam-community-secure-login.xyz/verify to secure your inventory.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "high",
+    "notes": "Brand impersonation + suspicious TLD + inventory bait.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_08",
+    "input": "Your tax refund is ready. Submit your card details and verify your identity to release the refund today.",
+    "expected_category": "Bank Scam",
+    "expected_risk": "high",
+    "notes": "Refund lure plus identity and card request.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_09",
+    "input": "We tried to renew your Netflix subscription but your card was declined. Update billing now to keep streaming without interruption.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "medium",
+    "notes": "Brand impersonation and billing pressure without a visible link.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_10",
+    "input": "Your Microsoft 365 mailbox is over quota. Login to avoid data loss and reactivate storage immediately.",
+    "expected_category": "Phishing Scam",
+    "expected_risk": "medium",
+    "notes": "Mailbox scare and login lure.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_11",
+    "input": "ALEX PAID YOU $480. Your transfer is pending. Upgrade your account to business and send a refundable fee to receive the funds.",
+    "expected_category": "Bank Scam",
+    "expected_risk": "high",
+    "notes": "Payment app scam with upgrade and fee.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_12",
+    "input": "DHL notice: customs processing incomplete. Review your shipment and settle the outstanding fee here: https://dhl-secure-clearance.vip/billing",
+    "expected_category": "Parcel Scam",
+    "expected_risk": "high",
+    "notes": "Carrier impersonation + customs fee + suspicious TLD.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_13",
+    "input": "You have been selected for a paid ambassador role. Daily payouts available. Join our WhatsApp onboarding and secure your position today.",
+    "expected_category": "Job Scam",
+    "expected_risk": "medium",
+    "notes": "Recruitment scam with off-platform contact.",
+    "source": "crafted"
+  },
+  {
+    "id": "crafted_scam_14",
+    "input": "Wallet validation required. Visit https://rb.gy/demo and reconnect your wallet to avoid asset restrictions.",
+    "expected_category": "Crypto Scam",
+    "expected_risk": "high",
+    "notes": "Shortlink + wallet validation.",
+    "source": "crafted"
+  },
+  {
+    "id": "benign_01",
+    "input": "Hi, are we still meeting at 6 tonight?",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Normal personal coordination message.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_02",
+    "input": "Your monthly statement is available in the official app. No action required.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Legitimate app-oriented service notification with benign language.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_03",
+    "input": "Attached is the invoice for review when you have time. Thanks.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Normal business message with no pressure or link.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_04",
+    "input": "Reminder: project update call moved to Thursday at 10 AM.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Normal scheduling reminder.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_05",
+    "input": "Your order has shipped. Track it in your account in the official app.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Benign delivery message with official-app instruction instead of external pressure link.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_06",
+    "input": "Please review the presentation notes before tomorrow's class.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Everyday educational/work context.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_07",
+    "input": "Call me when free. I want to confirm dinner plans.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Personal message with no suspicious indicators.",
+    "source": "crafted_benign"
+  },
+  {
+    "id": "benign_08",
+    "input": "The updated policy document is available on the internal portal. No action required right now.",
+    "expected_category": "Unknown / Needs Review",
+    "expected_risk": "low",
+    "notes": "Administrative but calm and benign.",
+    "source": "crafted_benign"
+  }
+]
