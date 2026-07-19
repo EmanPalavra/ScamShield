@@ -194,7 +194,7 @@ The evaluator reports:
 - Message classification is heuristic and rule-based.
 - Results should support triage, not replace independent verification.
 
-## Portfolio Value
+## Skills Demonstrated
 
 This project demonstrates:
 
