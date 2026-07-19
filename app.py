@@ -1,24 +1,44 @@
 from datetime import datetime, timezone
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, render_template, request
 from pathlib import Path
+from collections import deque
 import base64
 import json
 import os
 import re
+from threading import Lock
+from time import monotonic
 from urllib.parse import urlparse
 
 import requests
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 PHISHTANK_CACHE_FILE = DATA_DIR / "phishtank_cache.json"
-PHISHTANK_CACHE_HOURS = int(os.getenv("PHISHTANK_CACHE_HOURS", "12"))
-PHISHTANK_MAX_CACHE_ITEMS = int(os.getenv("PHISHTANK_MAX_CACHE_ITEMS", "5000"))
+PHISHTANK_CACHE_HOURS = max(1, int(os.getenv("PHISHTANK_CACHE_HOURS", "12")))
+PHISHTANK_MAX_CACHE_ITEMS = max(1, int(os.getenv("PHISHTANK_MAX_CACHE_ITEMS", "5000")))
+MAX_MESSAGE_LENGTH = max(1, int(os.getenv("MAX_MESSAGE_LENGTH", "10000")))
+MAX_URLS_PER_SCAN = max(1, int(os.getenv("MAX_URLS_PER_SCAN", "5")))
+ENABLE_SHORT_URL_EXPANSION = os.getenv("ENABLE_SHORT_URL_EXPANSION", "false").lower() == "true"
+ALLOW_INSECURE_PHISHTANK = os.getenv("ALLOW_INSECURE_PHISHTANK", "false").lower() == "true"
+QUICK_SCAN_RATE_LIMIT = max(1, int(os.getenv("QUICK_SCAN_RATE_LIMIT", "20")))
+DEEP_SCAN_RATE_LIMIT = max(1, int(os.getenv("DEEP_SCAN_RATE_LIMIT", "5")))
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_CLIENTS = 10000
+
+RATE_LIMIT_BUCKETS = {}
+RATE_LIMIT_LOCK = Lock()
+SAFE_BROWSING_CACHE = {}
+SAFE_BROWSING_CACHE_LOCK = Lock()
+
+app.config["MAX_CONTENT_LENGTH"] = max(1024, int(os.getenv("MAX_CONTENT_LENGTH", str(16 * 1024))))
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 PHISHTANK_API_KEY = os.getenv("PHISHTANK_API_KEY")
@@ -603,9 +623,15 @@ def load_phishtank_cache():
 
 
 def save_phishtank_cache(cache):
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    trimmed_items = list(cache.items())[-PHISHTANK_MAX_CACHE_ITEMS:]
-    PHISHTANK_CACHE_FILE.write_text(json.dumps(dict(trimmed_items), indent=2), encoding="utf-8")
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        trimmed_items = list(cache.items())[-PHISHTANK_MAX_CACHE_ITEMS:]
+        PHISHTANK_CACHE_FILE.write_text(json.dumps(dict(trimmed_items), indent=2), encoding="utf-8")
+    except OSError:
+        # Some production hosts have a read-only or ephemeral filesystem. A cache
+        # failure must never prevent the scan itself from completing.
+        return False
+    return True
 
 
 def update_phishtank_cache_entry(domain, flagged, message):
@@ -652,7 +678,10 @@ def score_domain(domain):
     registrable_label = labels[-2] if len(labels) >= 2 else labels[0] if labels else ""
     vowel_count = sum(char in "aeiou" for char in registrable_label)
     vowel_ratio = (vowel_count / len(registrable_label)) if registrable_label else 0
-    if registrable_label and len(registrable_label) >= 6 and re.search(r"[bcdfghjklmnpqrstvwxyz]{4,}", registrable_label):
+    if registrable_label and len(registrable_label) >= 6 and vowel_count == 0:
+        risk += 0.5
+        reasons.append("The domain name has no vowels and looks machine-generated, which is a strong disposable-domain signal.")
+    elif registrable_label and len(registrable_label) >= 6 and re.search(r"[bcdfghjklmnpqrstvwxyz]{4,}", registrable_label):
         risk += 0.16
         reasons.append("The domain name contains an unusual consonant-heavy pattern often seen in disposable scam domains.")
     elif registrable_label and len(registrable_label) >= 6 and vowel_ratio <= 0.25:
@@ -744,6 +773,9 @@ def expand_short_url(url):
     domain = extract_domain(url)
     if domain not in SHORT_DOMAINS:
         return None, "URL expansion not needed."
+
+    if not ENABLE_SHORT_URL_EXPANSION:
+        return None, "Short-link expansion is disabled on this public instance for server safety. Treat the hidden destination as higher risk."
 
     try:
         response = requests.head(
@@ -974,12 +1006,12 @@ def score_message(message, urls):
             for scam_type, boost in pattern["boosts"].items():
                 scores[scam_type] += boost
             signal_groups[f"pattern:{pattern['label']}"] = max(pattern["boosts"].values())
-            if pattern["label"] in {"business_document_lure", "streaming_billing_scare", "shopping_product_lure", "quota_reactivation_flow"}:
+            if pattern["label"] in {"business_document_lure", "streaming_billing_scare", "quota_reactivation_flow"}:
                 risk_floor = max(risk_floor, 0.46)
-            elif pattern["label"] in {"cloud_billing_lockout", "payment_hold_flow", "parcel_release_fee_flow", "charge_review_flow", "payment_upgrade_fee_flow"}:
+            elif pattern["label"] in {"cloud_billing_lockout", "charge_review_flow"}:
                 risk_floor = max(risk_floor, 0.58)
-            elif pattern["label"] in {"refund_identity_flow", "wallet_takeover_flow", "wallet_validation_flow", "credential_theft_flow", "bank_fraud_flow", "celebrity_crypto_giveaway", "aml_deposit_release_scam", "gift_card_payment_pivot", "zelle_hold_flow", "tax_refund_lure"}:
-                risk_floor = max(risk_floor, 0.68)
+            elif pattern["label"] in {"shopping_product_lure", "payment_hold_flow", "parcel_release_fee_flow", "payment_upgrade_fee_flow", "refund_identity_flow", "wallet_takeover_flow", "wallet_validation_flow", "credential_theft_flow", "bank_fraud_flow", "celebrity_crypto_giveaway", "aml_deposit_release_scam", "gift_card_payment_pivot", "zelle_hold_flow", "tax_refund_lure"}:
+                risk_floor = max(risk_floor, 0.76)
             elif pattern["label"] in {"founder_meeting_recruitment_lure", "reply_yes_job_lure", "high_pay_reply_yes_job_lure"}:
                 risk_floor = max(risk_floor, 0.48)
             elif pattern["label"] in {"trading_signal_lure"}:
@@ -987,7 +1019,7 @@ def score_message(message, urls):
             elif pattern["label"] in {"subscription_decline_flow"}:
                 risk_floor = max(risk_floor, 0.46)
             elif pattern["label"] in {"remote_job_fee_flow"}:
-                risk_floor = max(risk_floor, 0.58)
+                risk_floor = max(risk_floor, 0.76)
 
     if compliment_hits and reward_invitation_hits and recruitment_hits:
         supporting_reasons.append("The message combines flattery, an invitation, and a reward, which is a strong creator-outreach scam pattern.")
@@ -1009,16 +1041,16 @@ def score_message(message, urls):
         risk_floor = max(risk_floor, 0.72)
 
     if ("refund" in msg and "card details" in msg) or ("tax refund" in msg and "verify your identity" in msg):
-        risk_floor = max(risk_floor, 0.66)
+        risk_floor = max(risk_floor, 0.76)
 
     if ("zelle" in msg or "transfer" in msg) and ("account on hold" in msg or "business user" in msg):
-        risk_floor = max(risk_floor, 0.64)
+        risk_floor = max(risk_floor, 0.76)
 
     if ("delivery fee" in msg or "handling fee" in msg or "insurance charge" in msg) and ("package" in msg or "shipment" in msg):
-        risk_floor = max(risk_floor, 0.6)
+        risk_floor = max(risk_floor, 0.76)
 
     if ("no experience needed" in msg and ("telegram" in msg or "whatsapp" in msg)) or (off_platform_hits and payment_pressure_hits):
-        risk_floor = max(risk_floor, 0.66)
+        risk_floor = max(risk_floor, 0.76)
 
     if ("daily payout" in msg or "daily payouts" in msg) and ("whatsapp" in msg or "telegram" in msg or "onboarding" in msg):
         risk_floor = max(risk_floor, 0.48)
@@ -1030,13 +1062,13 @@ def score_message(message, urls):
         risk_floor = max(risk_floor, 0.46)
 
     if ("paid you" in msg or "transfer is pending" in msg) and ("refundable fee" in msg or "upgrade your account" in msg):
-        risk_floor = max(risk_floor, 0.68)
+        risk_floor = max(risk_floor, 0.76)
 
     if ("validate your wallet" in msg or "wallet validation" in msg) and ("recovery phrase" in msg or "wallet" in msg):
-        risk_floor = max(risk_floor, 0.72)
+        risk_floor = max(risk_floor, 0.76)
 
     if crypto_promo_hits >= 2 and ("register" in msg or "promo code" in msg):
-        risk_floor = max(risk_floor, 0.72)
+        risk_floor = max(risk_floor, 0.76)
 
     if scheduling_lure_hits >= 2 and ("remote role" in msg or "resume" in msg or "founder" in msg):
         risk_floor = max(risk_floor, 0.46)
@@ -1094,7 +1126,7 @@ def score_message(message, urls):
         scores["Social Engineering / Recruitment Scam"] = max(0, scores["Social Engineering / Recruitment Scam"] - benign_score * 0.65)
         signal_groups["benign_context_offset"] = -benign_score
 
-    if not urls and high_severity_hits == 0 and payment_pressure_hits == 0:
+    if not urls and high_severity_hits == 0 and payment_pressure_hits == 0 and risk_floor < 0.45:
         if recruitment_hits == 0 and off_platform_hits == 0 and reward_invitation_hits == 0:
             best_soft_cap = 16 if benign_score >= 10 else 20
             for category in scores:
@@ -1134,6 +1166,12 @@ def score_message(message, urls):
                 "compliment_hits": compliment_hits,
                 "reward_invitation_hits": reward_invitation_hits,
                 "conversation_stage_hits": conversation_stage_hits,
+                "payment_pressure_hits": payment_pressure_hits,
+                "off_platform_hits": off_platform_hits,
+                "crypto_promo_hits": crypto_promo_hits,
+                "scheduling_lure_hits": scheduling_lure_hits,
+                "advance_fee_crypto_hits": advance_fee_crypto_hits,
+                "gift_card_scam_hits": gift_card_scam_hits,
             },
         }
 
@@ -1159,6 +1197,12 @@ def score_message(message, urls):
             "compliment_hits": compliment_hits,
             "reward_invitation_hits": reward_invitation_hits,
             "conversation_stage_hits": conversation_stage_hits,
+            "payment_pressure_hits": payment_pressure_hits,
+            "off_platform_hits": off_platform_hits,
+            "crypto_promo_hits": crypto_promo_hits,
+            "scheduling_lure_hits": scheduling_lure_hits,
+            "advance_fee_crypto_hits": advance_fee_crypto_hits,
+            "gift_card_scam_hits": gift_card_scam_hits,
         },
     }
 
@@ -1167,30 +1211,50 @@ def google_safe_browsing_check(url):
     if not GOOGLE_API_KEY:
         return None, "Google Safe Browsing is not configured."
 
-    endpoint = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_API_KEY}"
-    payload = {
-        "client": {"clientId": "ScamShield", "clientVersion": "3.0"},
-        "threatInfo": {
-            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
-            "platformTypes": ["ANY_PLATFORM"],
-            "threatEntryTypes": ["URL"],
-            "threatEntries": [{"url": ensure_url_scheme(url)}],
-        },
-    }
+    normalized_url = ensure_url_scheme(url)
+    now = monotonic()
+    with SAFE_BROWSING_CACHE_LOCK:
+        cached = SAFE_BROWSING_CACHE.get(normalized_url)
+        if cached and cached[0] > now:
+            return cached[1], cached[2]
+
+    endpoint = "https://safebrowsing.googleapis.com/v5/urls:search"
 
     try:
-        res = requests.post(
+        res = requests.get(
             endpoint,
-            json=payload,
+            params={"key": GOOGLE_API_KEY, "urls": normalized_url},
             timeout=8,
             headers={"User-Agent": APP_USER_AGENT},
         )
+        if res.status_code == 429:
+            return None, "Google Safe Browsing rate-limited this lookup (HTTP 429)."
+        if res.status_code >= 400:
+            return None, f"Google Safe Browsing lookup failed with HTTP {res.status_code}."
         data = res.json()
-        if "matches" in data:
-            return True, "Google Safe Browsing found this URL on a known threat list."
-        return False, "Google Safe Browsing did not flag it. That usually means it is not blocklisted yet, not that it is trustworthy."
+        flagged = bool(data.get("threats"))
+        if flagged:
+            message = "Google Safe Browsing found this URL on a known threat list."
+        else:
+            message = "Google Safe Browsing did not flag it. That usually means it is not blocklisted yet, not that it is trustworthy."
+
+        try:
+            cache_seconds = float(str(data.get("cacheDuration", "300s")).rstrip("s"))
+        except ValueError:
+            cache_seconds = 300
+        cache_seconds = min(max(cache_seconds, 1), 86400)
+
+        with SAFE_BROWSING_CACHE_LOCK:
+            if len(SAFE_BROWSING_CACHE) >= 5000:
+                oldest_key = min(SAFE_BROWSING_CACHE, key=lambda item: SAFE_BROWSING_CACHE[item][0])
+                SAFE_BROWSING_CACHE.pop(oldest_key, None)
+            SAFE_BROWSING_CACHE[normalized_url] = (now + cache_seconds, flagged, message)
+
+        return flagged, message
     except requests.RequestException:
         return None, "Google Safe Browsing could not be reached."
+    except json.JSONDecodeError:
+        return None, "Google Safe Browsing returned unreadable data."
 
 
 def phishtank_check(url):
@@ -1201,6 +1265,9 @@ def phishtank_check(url):
 
     if not PHISHTANK_API_KEY:
         return None, "PhishTank is not configured. A local cache file is supported if you already have feed access."
+
+    if not ALLOW_INSECURE_PHISHTANK:
+        return None, "Direct PhishTank lookup is disabled because its official endpoint sends requests over unencrypted HTTP."
 
     try:
         endpoint = "http://checkurl.dev.phishtank.com/checkurl/"
@@ -1255,6 +1322,8 @@ def domain_age_check(domain):
             return None, None, "Domain age lookup was rate-limited by the RDAP service (HTTP 429)."
         if res.status_code >= 500:
             return None, None, f"Domain age lookup failed on the RDAP service side (HTTP {res.status_code})."
+        if res.status_code >= 400:
+            return None, None, f"Domain age lookup failed with HTTP {res.status_code}."
 
         data = res.json()
         dates = []
@@ -1295,6 +1364,12 @@ def virus_total_check(url):
         url_id = base64.urlsafe_b64encode(ensure_url_scheme(url).encode()).decode().strip("=")
         headers["User-Agent"] = APP_USER_AGENT
         res = requests.get(f"{endpoint}/{url_id}", headers=headers, timeout=10)
+        if res.status_code == 404:
+            return None, None, "VirusTotal has no existing analysis for this URL yet."
+        if res.status_code == 429:
+            return None, None, "VirusTotal rate-limited this lookup (HTTP 429)."
+        if res.status_code >= 400:
+            return None, None, f"VirusTotal lookup failed with HTTP {res.status_code}."
         data = res.json()
         stats = data.get("data", {}).get("attributes", {}).get("last_analysis_stats", {})
         malicious = stats.get("malicious", 0)
@@ -1323,12 +1398,15 @@ def virus_total_check(url):
         return None, None, "VirusTotal returned no analysis details for this URL."
     except requests.RequestException:
         return None, None, "VirusTotal could not be reached."
+    except json.JSONDecodeError:
+        return None, None, "VirusTotal returned unreadable data."
 
 
 def combine_risk_scores(message_analysis, link_signals):
     reasons = []
+    risk_floor = message_analysis.get("risk_floor", 0.0)
     message_risk = min(0.95, 0.12 + (message_analysis["score"] / 120))
-    message_risk = max(message_risk, message_analysis.get("risk_floor", 0.0))
+    message_risk = max(message_risk, risk_floor)
     overall = message_risk
     signal_summary = message_analysis.get("signal_summary", {})
     high_severity_hits = (
@@ -1336,6 +1414,9 @@ def combine_risk_scores(message_analysis, link_signals):
         + signal_summary.get("fear_hits", 0)
         + signal_summary.get("credential_hits", 0)
         + signal_summary.get("link_to_action_hits", 0)
+        + signal_summary.get("payment_pressure_hits", 0)
+        + signal_summary.get("advance_fee_crypto_hits", 0)
+        + signal_summary.get("gift_card_scam_hits", 0)
     )
     recruitment_only = (
         signal_summary.get("recruitment_hits", 0) > 0
@@ -1352,9 +1433,9 @@ def combine_risk_scores(message_analysis, link_signals):
         average_link_risk = sum(signal["risk_score"] / 100 for signal in link_signals) / len(link_signals)
         overall = (message_risk * 0.35) + (max_link_risk * 0.45) + (average_link_risk * 0.20)
     else:
-        if message_analysis.get("benign_score", 0) >= 16 and high_severity_hits == 0:
+        if message_analysis.get("benign_score", 0) >= 16 and high_severity_hits == 0 and risk_floor < 0.45 and message_analysis["score"] < 45:
             overall = min(overall, 0.24)
-        elif message_analysis.get("benign_score", 0) >= 10 and high_severity_hits == 0:
+        elif message_analysis.get("benign_score", 0) >= 10 and high_severity_hits == 0 and risk_floor < 0.45 and message_analysis["score"] < 45:
             overall = min(overall, 0.32)
         elif recruitment_only:
             overall = min(overall, 0.39)
@@ -1377,6 +1458,27 @@ def combine_risk_scores(message_analysis, link_signals):
             reasons.append(signal["domain_age_message"])
         if signal["vt_message"] and signal["vt_risk"] not in (None, 0.02):
             reasons.append(signal["vt_message"])
+
+    overall = max(overall, risk_floor)
+
+    moderate_pattern_without_hard_harm = (
+        not link_signals
+        and 0.45 <= risk_floor <= 0.52
+        and high_severity_hits == 0
+    )
+    if moderate_pattern_without_hard_harm:
+        overall = min(overall, 0.72)
+        overall = max(overall, risk_floor)
+
+    recruitment_without_hard_harm = (
+        message_analysis.get("scam_type") in {"Job Scam", "Social Engineering / Recruitment Scam"}
+        and signal_summary.get("recruitment_hits", 0) > 0
+        and high_severity_hits == 0
+        and signal_summary.get("crypto_promo_hits", 0) == 0
+    )
+    if recruitment_without_hard_harm and (not link_signals or max(signal["risk_score"] for signal in link_signals) < 75):
+        overall = min(overall, 0.72)
+        overall = max(overall, risk_floor)
 
     return min(overall, 0.99), reasons[:6]
 
@@ -1415,10 +1517,16 @@ def provider_status_from_message(provider_name, message, configured=True):
 
 
 def build_provider_statuses(link_reports, include_vt=False):
+    phishtank_configured = bool(PHISHTANK_API_KEY) and ALLOW_INSECURE_PHISHTANK
+    if PHISHTANK_API_KEY and not ALLOW_INSECURE_PHISHTANK:
+        phishtank_waiting_message = "Direct lookup is disabled because the official API endpoint uses unencrypted HTTP."
+    else:
+        phishtank_waiting_message = "Waiting for a URL to scan."
+
     if not link_reports:
         return [
             provider_status_from_message("Google Safe Browsing", "Waiting for a URL to scan.", configured=bool(GOOGLE_API_KEY)),
-            provider_status_from_message("PhishTank", "Waiting for a URL to scan.", configured=bool(PHISHTANK_API_KEY)),
+            provider_status_from_message("PhishTank", phishtank_waiting_message, configured=phishtank_configured),
             provider_status_from_message("RDAP Domain Age", "Waiting for a URL to scan.", configured=True),
             provider_status_from_message("VirusTotal", "Deep scan not requested yet.", configured=bool(VT_API_KEY)),
         ]
@@ -1426,7 +1534,7 @@ def build_provider_statuses(link_reports, include_vt=False):
     first_report = link_reports[0]
     statuses = [
         provider_status_from_message("Google Safe Browsing", first_report.get("google_safe_browsing"), configured=bool(GOOGLE_API_KEY)),
-        provider_status_from_message("PhishTank", first_report.get("phishtank"), configured=bool(PHISHTANK_API_KEY)),
+        provider_status_from_message("PhishTank", first_report.get("phishtank"), configured=phishtank_configured),
         provider_status_from_message("RDAP Domain Age", first_report.get("domain_age_message"), configured=True),
     ]
 
@@ -1669,7 +1777,7 @@ def generate_explanation(scan_summary, urls, reasons, message_analysis, link_rep
 
 
 def run_scan(message, include_vt=False):
-    urls = extract_urls(message)
+    urls = extract_urls(message)[:MAX_URLS_PER_SCAN]
     iocs = extract_iocs(message, urls)
     message_analysis = score_message(message, urls)
     link_reports = [build_link_report(url, include_vt=include_vt) for url in urls]
@@ -1702,6 +1810,7 @@ def build_page_context(include_vt=False, message=""):
         "explanation_lines": None,
         "link_reports": [],
         "deep_results": [] if include_vt else None,
+        "deep_status": None,
         "provider_statuses": build_provider_statuses([], include_vt=include_vt),
         "explainability": [],
         "recommended_actions": [],
@@ -1711,6 +1820,10 @@ def build_page_context(include_vt=False, message=""):
         "privacy_notes": PRIVACY_NOTES,
         "scam_examples": SCAM_EXAMPLES,
         "safe_examples": SAFE_EXAMPLES,
+        "error_message": None,
+        "scan_notice": None,
+        "active_scan": None,
+        "max_message_length": MAX_MESSAGE_LENGTH,
     }
 
 
@@ -1718,14 +1831,99 @@ def render_index(context):
     return render_template("index.html", **context)
 
 
+def get_submitted_message():
+    message = request.form.get("message", "").strip()
+    if not message:
+        return "", "Paste a message or link before starting a scan."
+    if len(message) > MAX_MESSAGE_LENGTH:
+        return message[:MAX_MESSAGE_LENGTH], f"The input is too long. Keep it under {MAX_MESSAGE_LENGTH:,} characters."
+    return message, None
+
+
+def scan_rate_limit_retry_after(scan_kind):
+    if app.config.get("TESTING"):
+        return None
+
+    limit = DEEP_SCAN_RATE_LIMIT if scan_kind == "deep" else QUICK_SCAN_RATE_LIMIT
+    client = request.remote_addr or "unknown"
+    key = (client, scan_kind)
+    now = monotonic()
+
+    with RATE_LIMIT_LOCK:
+        if len(RATE_LIMIT_BUCKETS) >= RATE_LIMIT_MAX_CLIENTS:
+            expired_keys = [
+                bucket_key
+                for bucket_key, timestamps in RATE_LIMIT_BUCKETS.items()
+                if not timestamps or timestamps[-1] <= now - RATE_LIMIT_WINDOW_SECONDS
+            ]
+            for expired_key in expired_keys:
+                RATE_LIMIT_BUCKETS.pop(expired_key, None)
+
+        timestamps = RATE_LIMIT_BUCKETS.setdefault(key, deque())
+        while timestamps and timestamps[0] <= now - RATE_LIMIT_WINDOW_SECONDS:
+            timestamps.popleft()
+
+        if len(timestamps) >= limit:
+            return max(1, int(RATE_LIMIT_WINDOW_SECONDS - (now - timestamps[0])) + 1)
+
+        timestamps.append(now)
+        return None
+
+
+def add_url_limit_notice(context, message):
+    url_count = len(extract_urls(message))
+    if url_count > MAX_URLS_PER_SCAN:
+        context["scan_notice"] = (
+            f"This message contains {url_count} links. To keep public scans fast and prevent provider abuse, "
+            f"only the first {MAX_URLS_PER_SCAN} were checked."
+        )
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; style-src 'self' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; "
+        "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
+        "base-uri 'self'; form-action 'self'"
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.route("/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"})
+
+
+@app.errorhandler(413)
+def request_too_large(_error):
+    context = build_page_context()
+    context["error_message"] = "The submitted content is too large. Paste a shorter message and try again."
+    return render_index(context), 413
+
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     context = build_page_context(include_vt=False)
 
     if request.method == "POST":
-        message = request.form["message"].strip()
+        message, error_message = get_submitted_message()
         context["message"] = message
-        if message:
+        context["error_message"] = error_message
+        context["active_scan"] = "quick"
+        if not error_message:
+            retry_after = scan_rate_limit_retry_after("quick")
+            if retry_after is not None:
+                context["error_message"] = f"Too many Quick Scans from this connection. Try again in {retry_after} seconds."
+                return render_index(context), 429, {"Retry-After": str(retry_after)}
             (
                 context["scan_summary"],
                 context["explanation_lines"],
@@ -1736,16 +1934,23 @@ def home():
                 context["iocs"],
                 context["evidence_breakdown"],
             ) = run_scan(message, include_vt=False)
+            add_url_limit_notice(context, message)
 
     return render_index(context)
 
 
 @app.route("/deep", methods=["POST"])
 def deep_scan():
-    message = request.form["message"].strip()
+    message, error_message = get_submitted_message()
     context = build_page_context(include_vt=True, message=message)
+    context["error_message"] = error_message
+    context["active_scan"] = "deep"
 
-    if message:
+    if not error_message:
+        retry_after = scan_rate_limit_retry_after("deep")
+        if retry_after is not None:
+            context["error_message"] = f"Too many Deep Scans from this connection. Try again in {retry_after} seconds."
+            return render_index(context), 429, {"Retry-After": str(retry_after)}
         (
             context["scan_summary"],
             context["explanation_lines"],
@@ -1756,12 +1961,17 @@ def deep_scan():
             context["iocs"],
             context["evidence_breakdown"],
         ) = run_scan(message, include_vt=True)
+        add_url_limit_notice(context, message)
         for report in context["link_reports"]:
             context["deep_results"].append({
                 "url": report["url"],
                 "status": "Flagged" if report["vt_risk"] and report["vt_risk"] > 0.05 else "Not Flagged" if report["vt_risk"] is not None else "Unavailable",
                 "message": report["vt_message"] or "VirusTotal was not used for this result.",
             })
+        if context["deep_results"]:
+            context["deep_status"] = "Deep Scan completed. VirusTotal results are included below."
+        else:
+            context["deep_status"] = "Message analysis completed. VirusTotal checks URLs only, and no URL was found in this input."
 
     return render_index(context)
 

@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: scamshield
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 45 app:app
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: APP_USER_AGENT
+        value: ScamShield/1.0 security scanner
+      - key: ENABLE_SHORT_URL_EXPANSION
+        value: "false"
+      - key: ALLOW_INSECURE_PHISHTANK
+        value: "false"
+      - key: QUICK_SCAN_RATE_LIMIT
+        value: "20"
+      - key: DEEP_SCAN_RATE_LIMIT
+        value: "5"
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: PHISHTANK_API_KEY
+        sync: false
+      - key: VT_API_KEY
+        sync: false

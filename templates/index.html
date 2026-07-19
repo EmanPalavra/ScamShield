@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScamShield - SOC Tool</title>
+    <meta name="description" content="Check suspicious messages and links for scam signals, reputation warnings, and practical next steps.">
+    <meta name="theme-color" content="#06111c">
+    <title>ScamShield — Check suspicious messages and links</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -16,6 +20,11 @@
                 Paste any SMS, WhatsApp, email text, or suspicious link. ScamShield scores the risk,
                 explains why it looks dangerous, and gives next steps in plain language.
             </p>
+            <div class="trust-row" aria-label="Service highlights">
+                <span>No account required</span>
+                <span>Messages are not stored</span>
+                <span>Results include clear next steps</span>
+            </div>
         </section>
 
         <section class="panel">
@@ -26,7 +35,7 @@
                         <h2>Analyze a message or link</h2>
                     </div>
 
-                    <form method="POST" action="/" class="scan-form">
+                    <form method="POST" action="{{ url_for('home') }}" class="scan-form" id="scan-form">
                         <label for="message" class="form-label">Message or link</label>
                         <div class="view-toggle">
                             <label class="view-option">
@@ -38,20 +47,38 @@
                                 <span>Analyst View</span>
                             </label>
                         </div>
-                        <textarea id="message" name="message" rows="8" placeholder="Paste the message, email body, WhatsApp text, or URL here...">{{ message }}</textarea>
-                        <div class="button-row">
-                            <button type="submit" class="primary-btn">Quick Scan</button>
+                        <textarea id="message" name="message" rows="8" maxlength="{{ max_message_length }}" required aria-describedby="message-help character-count" placeholder="Paste the message, email body, WhatsApp text, or URL here...">{{ message }}</textarea>
+                        <div class="input-meta">
+                            <span id="message-help">Do not paste passwords, verification codes, card numbers, or recovery phrases.</span>
+                            <span id="character-count" aria-live="polite">{{ message|length }} / {{ max_message_length }}</span>
                         </div>
+                        <div class="scan-actions">
+                            <button type="submit" class="primary-btn scan-submit" data-default-label="Quick Scan" data-loading-label="Running Quick Scan…">
+                                <span>Quick Scan</span>
+                                <small>Fast risk and reputation check</small>
+                            </button>
+                            <button type="submit" formaction="{{ url_for('deep_scan') }}" class="secondary-btn scan-submit" data-default-label="Deep Scan" data-loading-label="Running Deep Scan…">
+                                <span>Deep Scan</span>
+                                <small>Adds VirusTotal for every detected URL</small>
+                            </button>
+                        </div>
+                        <p class="mode-note"><strong>Deep Scan works independently.</strong> You do not need to run Quick Scan first. VirusTotal can inspect URLs only.</p>
                     </form>
 
-                    <form method="POST" action="/deep" class="scan-form deep-form">
-                        <input type="hidden" name="message" value="{{ message }}">
-                        <input type="hidden" name="view_mode" value="{{ view_mode }}">
-                        <button type="submit" class="secondary-btn">Deep Scan with VirusTotal</button>
-                    </form>
+                    {% if error_message %}
+                    <div class="status-message error-message" role="alert">{{ error_message }}</div>
+                    {% endif %}
+
+                    {% if scan_notice %}
+                    <div class="status-message notice-message" role="status">{{ scan_notice }}</div>
+                    {% endif %}
+
+                    {% if deep_status %}
+                    <div class="status-message success-message" role="status">{{ deep_status }}</div>
+                    {% endif %}
 
                     {% if scan_summary %}
-                    <div class="result-card summary-card">
+                    <div class="result-card summary-card {{ scan_summary.status|lower|replace(' ', '-') }}" id="scan-results" tabindex="-1">
                         <div class="risk-meter">
                             <div class="risk-ring">
                                 <span>{{ scan_summary.risk_percent }}%</span>
@@ -307,13 +334,16 @@
                             <span class="section-kicker">Examples</span>
                             <h2>Suspicious patterns</h2>
                         </div>
+                        <p class="muted info-intro">Open a category to compare common wording. Examples are patterns, not definitive proof.</p>
                         {% for category, examples in scam_examples.items() %}
-                        <div class="example-group">
-                            <h3>{{ category }}</h3>
-                            {% for example in examples %}
-                            <p>{{ example }}</p>
-                            {% endfor %}
-                        </div>
+                        <details class="example-details">
+                            <summary>{{ category }}</summary>
+                            <div class="example-content">
+                                {% for example in examples %}
+                                <p>{{ example }}</p>
+                                {% endfor %}
+                            </div>
+                        </details>
                         {% endfor %}
                     </div>
 
@@ -322,13 +352,23 @@
                             <span class="section-kicker">Benign messages</span>
                             <h2>Normal-looking examples</h2>
                         </div>
-                        {% for example in safe_examples %}
-                        <p>{{ example }}</p>
-                        {% endfor %}
+                        <details class="example-details">
+                            <summary>Show normal-looking examples</summary>
+                            <div class="example-content">
+                                {% for example in safe_examples %}
+                                <p>{{ example }}</p>
+                                {% endfor %}
+                            </div>
+                        </details>
                     </div>
                 </aside>
             </div>
         </section>
+
+        <footer class="site-footer">
+            <p><strong>Important:</strong> ScamShield provides a risk estimate, not a guarantee. If money, account access, or identity documents are involved, verify through an official app, website, or phone number you find independently.</p>
+        </footer>
     </main>
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </body>
 </html>
