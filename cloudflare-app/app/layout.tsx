@@ -31,13 +31,13 @@ export const metadata: Metadata = {
       description: "Check suspicious messages and links with explainable risk signals and clear next steps.",
       type: "website",
       url: CANONICAL_ORIGIN,
-      images: [{ url: `${CANONICAL_ORIGIN}/og.png`, width: 1731, height: 909, alt: "ScamShield — Pause before you trust the message" }],
+      images: [{ url: `${CANONICAL_ORIGIN}/scamshield-project-preview.png`, width: 1731, height: 909, alt: "ScamShield — Pause before you trust the message" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "ScamShield",
       description: "Explainable scam risk analysis for suspicious messages and URLs.",
-      images: [`${CANONICAL_ORIGIN}/og.png`],
+      images: [`${CANONICAL_ORIGIN}/scamshield-project-preview.png`],
     },
   };
 

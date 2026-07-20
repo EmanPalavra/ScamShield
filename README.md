@@ -4,7 +4,7 @@ ScamShield is a web application for reviewing suspicious messages and links befo
 
 [Live demo](https://scam.shield-security.workers.dev/)
 
-![ScamShield project preview](cloudflare-app/public/og.png)
+![ScamShield project preview](cloudflare-app/public/scamshield-project-preview.png)
 
 ## Overview
 
