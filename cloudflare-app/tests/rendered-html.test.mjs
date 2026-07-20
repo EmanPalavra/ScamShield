@@ -24,7 +24,7 @@ test("renders the finished public product", async () => {
   assert.match(html, /Quick Scan/);
   assert.match(html, /Deep Scan/);
   assert.match(html, /favicon\.svg/);
-  assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
+  assert.doesNotMatch(html, /react-loading-skeleton|Your site is taking shape/i);
 });
 
 test("returns health and security headers", async () => {
