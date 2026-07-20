@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
-import { headers } from "next/headers";
 import "./globals.css";
+
+const CANONICAL_ORIGIN = "https://scam.shield-security.workers.dev";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -13,35 +14,32 @@ const orbitron = Orbitron({
   subsets: ["latin"],
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const origin = `${protocol}://${host}`;
-
-  return {
-    metadataBase: new URL(origin),
+export const metadata: Metadata = {
+    metadataBase: new URL(CANONICAL_ORIGIN),
     title: {
       default: "ScamShield — Suspicious message and URL checker",
       template: "%s — ScamShield",
     },
     description:
       "Explainable scam risk analysis with message heuristics, URL inspection, live reputation providers, and consent-based VirusTotal analysis.",
+    icons: {
+      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+      shortcut: "/favicon.svg",
+    },
     openGraph: {
       title: "ScamShield — Pause before you trust the message",
       description: "Check suspicious messages and links with explainable risk signals and clear next steps.",
       type: "website",
-      url: origin,
-      images: [{ url: `${origin}/og.png`, width: 1536, height: 806, alt: "ScamShield — Pause before you trust the message" }],
+      url: CANONICAL_ORIGIN,
+      images: [{ url: `${CANONICAL_ORIGIN}/og.png`, width: 1536, height: 806, alt: "ScamShield — Pause before you trust the message" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "ScamShield",
       description: "Explainable scam risk analysis for suspicious messages and URLs.",
-      images: [`${origin}/og.png`],
+      images: [`${CANONICAL_ORIGIN}/og.png`],
     },
   };
-}
 
 export default function RootLayout({
   children,

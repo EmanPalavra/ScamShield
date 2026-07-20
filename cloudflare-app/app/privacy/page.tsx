@@ -3,17 +3,78 @@ import { InfoShell } from "../info-shell";
 
 export const metadata: Metadata = { title: "Privacy" };
 
+const sections = [
+  { id: "submitted-data", label: "Submitted data" },
+  { id: "retention", label: "Retention boundary" },
+  { id: "providers", label: "External providers" },
+  { id: "fresh-analysis", label: "Fresh analysis consent" },
+];
+
 export default function PrivacyPage() {
   return (
     <InfoShell
+      page="privacy"
       eyebrow="Data handling"
-      title="Privacy before enrichment"
-      intro="ScamShield is designed to minimize retained data, but live reputation checks necessarily share URLs with external security providers."
+      title="Privacy boundaries you can understand"
+      intro="ScamShield minimizes retained application data and clearly separates local message analysis from external URL reputation checks. You should still remove private data before scanning."
+      sections={sections}
     >
-      <section><span className="info-number">01</span><div><h2>What ScamShield receives</h2><p>The service receives the message or URL you submit, basic request metadata needed for abuse controls, and a Turnstile verification token when bot protection is enabled.</p></div></section>
-      <section><span className="info-number">02</span><div><h2>What is not intentionally stored</h2><p>The application does not require an account and does not intentionally save pasted message content to an application database. Temporary platform logs and provider-side logs may still exist.</p></div></section>
-      <section><span className="info-number">03</span><div><h2>External providers</h2><p>URLs may be sent to Google Safe Browsing, RDAP services, and VirusTotal when the relevant checks are configured. Their own terms and privacy policies apply.</p></div></section>
-      <section><span className="info-number">04</span><div><h2>Fresh VirusTotal analysis</h2><p>A new analysis is never started automatically. ScamShield first reads the existing report, then requires explicit consent. Submitted URLs and results may become visible to VirusTotal and its security community, so private or credential-bearing links must not be submitted.</p></div></section>
+      <section id="submitted-data">
+        <div className="info-number"><span>01</span><small>Input</small></div>
+        <div className="info-section-copy">
+          <span className="info-section-label">What enters the scan</span>
+          <h2>Only submit what is necessary to assess the risk</h2>
+          <p>The service receives the message or URL you paste, basic request metadata required for security and rate limiting, and a Turnstile verification token when bot protection is configured.</p>
+          <ul className="info-points">
+            <li>Remove passwords, one-time codes, recovery links, identity numbers, and private internal URLs.</li>
+            <li>Include enough surrounding wording to preserve context, but redact unrelated personal details.</li>
+            <li>No ScamShield account is required to run a scan.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="retention">
+        <div className="info-number"><span>02</span><small>Storage</small></div>
+        <div className="info-section-copy">
+          <span className="info-section-label">Application boundary</span>
+          <h2>Pasted messages are not intentionally saved to an app database</h2>
+          <p>The current application does not maintain user profiles, scan history, or a database of submitted message bodies. A result is returned to the current browser session.</p>
+          <ul className="info-points">
+            <li>Short-lived in-memory abuse controls may process request metadata such as an IP-derived rate bucket.</li>
+            <li>Cloudflare platform logs and security telemetry may exist according to the hosting account configuration.</li>
+            <li>External providers maintain their own logs and retention rules independently of ScamShield.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="providers">
+        <div className="info-number"><span>03</span><small>Sharing</small></div>
+        <div className="info-section-copy">
+          <span className="info-section-label">URL enrichment</span>
+          <h2>External services receive only the data needed for their check</h2>
+          <p>When configured, eligible public URL or domain information is sent to security and registration providers. Private and reserved network addresses, embedded credentials, and sensitive tokenized URLs are blocked from external submission. Provider privacy policies, logging practices, and terms still apply to accepted requests.</p>
+          <div className="privacy-provider-grid">
+            <div><strong>Google Safe Browsing</strong><p>Receives URLs for known-threat matching.</p></div>
+            <div><strong>RDAP services</strong><p>Receive domain-registration queries, not the full message.</p></div>
+            <div><strong>VirusTotal</strong><p>Receives URL-related requests during Deep Scan or a consented fresh analysis.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="fresh-analysis">
+        <div className="info-number"><span>04</span><small>Consent</small></div>
+        <div className="info-section-copy">
+          <span className="info-section-label">Explicit external submission</span>
+          <h2>A new VirusTotal analysis never starts automatically</h2>
+          <p>Deep Scan first asks for an existing report. If you choose a fresh analysis, ScamShield displays a privacy warning and requires explicit consent before sending the URL.</p>
+          <ul className="info-points">
+            <li>Submitted URLs and results may become visible to VirusTotal and its security community.</li>
+            <li>Never submit private, one-time, credential-bearing, intranet, or password-reset links.</li>
+            <li>You can use the ScamShield result without starting a fresh VirusTotal analysis.</li>
+          </ul>
+          <div className="info-inline-note"><span aria-hidden="true">!</span><p><strong>Simple rule:</strong> if a link should not become public, do not submit it for fresh external analysis.</p></div>
+        </div>
+      </section>
     </InfoShell>
   );
 }
