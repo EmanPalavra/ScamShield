@@ -46,7 +46,7 @@ test("does not derive public metadata from untrusted forwarded hosts", async () 
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.doesNotMatch(html, /attacker\.example/);
-  assert.match(html, /https:\/\/scam\.shield-security\.workers\.dev\/og\.png/);
+  assert.match(html, /https:\/\/scam\.shield-security\.workers\.dev\/scamshield-project-preview\.png/);
 });
 
 test("runs a quick scan with an explainable simple result", async () => {
