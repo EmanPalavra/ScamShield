@@ -642,7 +642,7 @@ export function ScanApp() {
                   style={{ "--risk-progress": `${result.riskPercent * 3.6}deg` } as CSSProperties}
                   aria-label={`${result.riskLevel} risk, ${result.riskPercent} percent`}
                 >
-                  <div><span className="risk-symbol" aria-hidden="true">{riskIcon(result.riskLevel)}</span><strong>{result.riskPercent}</strong><small>/100</small></div>
+                  <div><span className="risk-symbol" aria-hidden="true">{riskIcon(result.riskLevel)}</span><span className="risk-score-value"><strong>{result.riskPercent}</strong><small>/100</small></span></div>
                 </div>
                 <span>{result.riskLevel} risk</span>
               </div>

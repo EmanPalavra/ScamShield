@@ -1,83 +1,136 @@
 # ScamShield
 
-ScamShield is a single Cloudflare Worker application for explainable scam-risk analysis of suspicious messages and URLs.
+ScamShield is a web application for reviewing suspicious messages and links before a user clicks, replies, pays, or shares sensitive information. It combines local detection rules with optional reputation services and presents the result as an explainable risk assessment rather than a simple safe/unsafe label.
 
-The active project lives in `cloudflare-app/`. The root `app.py` is only a compatibility launcher, so both of these commands start the same current application:
+[Live demo](https://scam.shield-security.workers.dev/)
 
-```powershell
-python app.py
-```
+![ScamShield project preview](cloudflare-app/public/og.png)
 
-```powershell
-cd cloudflare-app
-pnpm run dev
-```
+## Overview
 
-There is no separate Flask version anymore.
+Most scam checkers return a verdict with little context. ScamShield is built around the opposite approach: show the risk score, identify the behavior that influenced it, and give the user a practical next step.
 
-## Features
+A scan can include:
 
-- independent Quick Scan and Deep Scan flows
-- explainable message-pattern and URL-structure analysis
-- Google Safe Browsing, RDAP, and VirusTotal provider checks
-- explicit consent before a fresh VirusTotal submission
-- signed VirusTotal status polling
-- Simple and Analyst result views
-- responsive dark and light themes
-- How it works, Methodology, Privacy, and Limitations pages
-- bounded inputs, private-URL protection, rate limits, CSP, and security headers
+- a 0–100 risk score and risk band
+- the most likely scam pattern
+- detected social-engineering signals
+- URL structure and domain-age findings
+- reputation-provider coverage and status
+- extracted URLs, domains, email addresses, phone numbers, and wallet addresses
+- a concise set of recommended actions
 
-## Local setup
+## Quick Scan and Deep Scan
+
+| Mode | Intended use | Checks |
+| --- | --- | --- |
+| Quick Scan | Routine messages and links | Message patterns, URL structure, domain age, and Google Safe Browsing when configured |
+| Deep Scan | Cases where a link is the main concern | Everything in Quick Scan plus the latest available VirusTotal report |
+
+ScamShield checks for an existing VirusTotal report first. Submitting a URL for a fresh analysis is a separate action and requires explicit consent.
+
+## How the analysis works
+
+1. The input is normalized and URLs and indicators are extracted.
+2. Message text is evaluated for urgency, impersonation, credential requests, payment pressure, recruitment lures, and other social-engineering patterns.
+3. URLs are checked for suspicious structure, Punycode, IP-based hosts, shorteners, risky paths, unusual domains, and registration age.
+4. Configured reputation providers add external evidence without replacing the local analysis.
+5. The signals are combined into a weighted score with an evidence trail and recommended response.
+
+Unavailable providers are reported as unavailable. They are never treated as a clean result.
+
+## Technology
+
+| Area | Implementation |
+| --- | --- |
+| Interface | React, TypeScript, responsive CSS, dark and light themes |
+| Application framework | Vinext with Next-compatible App Router components |
+| Runtime | Cloudflare Workers |
+| Threat intelligence | Google Safe Browsing, RDAP, VirusTotal |
+| Abuse protection | Cloudflare Turnstile and request rate limits |
+| Testing | Node test runner, TypeScript checks, production build tests |
+
+## Run locally
 
 Requirements:
 
 - Node.js 22.13 or newer
-- pnpm, Corepack, or npm
-- Python only if you want to use the `python app.py` launcher
-
-Install dependencies once:
+- pnpm
 
 ```powershell
-cd cloudflare-app
+git clone https://github.com/EmanPalavra/ScamShield.git
+cd ScamShield/cloudflare-app
 pnpm install
+Copy-Item .env.example .env.local
+pnpm run dev
 ```
 
-Copy `cloudflare-app/.env.example` to `cloudflare-app/.env.local` and add only the provider keys needed for local testing. Never commit real keys.
+The development URL is printed in the terminal. From the repository root, `python app.py` starts the same application and can be used as a convenience launcher.
 
-Supported variables:
+### Environment variables
 
-```env
-GOOGLE_API_KEY=
-VIRUSTOTAL_API_KEY=
-STATUS_SIGNING_KEY=
-TURNSTILE_SITE_KEY=
-TURNSTILE_SECRET_KEY=
-```
+All variables are optional for local development. Missing provider credentials disable only the related live check.
 
-The old root `.env` file is not read by the current application.
+| Variable | Purpose | Exposure |
+| --- | --- | --- |
+| `GOOGLE_API_KEY` | Google Safe Browsing requests | Server secret |
+| `VIRUSTOTAL_API_KEY` | Existing reports and consent-based submissions | Server secret |
+| `STATUS_SIGNING_KEY` | Signs short-lived VirusTotal polling tokens | Server secret |
+| `TURNSTILE_SITE_KEY` | Renders the Turnstile widget | Public |
+| `TURNSTILE_SECRET_KEY` | Validates Turnstile tokens | Server secret |
+| `DISABLE_EXTERNAL_CHECKS` | Disables provider calls during tests | Local/test only |
+
+Production secrets should be stored with Cloudflare and must not be committed to the repository.
 
 ## Validation
 
-Run from `cloudflare-app/`:
+Run these commands from `cloudflare-app/`:
 
 ```powershell
 pnpm run lint
-pnpm exec tsc --noEmit
+pnpm run typecheck
 pnpm test
 ```
 
-## Project structure
+The test suite covers public page rendering, security headers, scan behavior, provider fallbacks, request validation, private-URL protection, signed polling, and the transparency pages.
 
-- `cloudflare-app/app/` — interface, result dashboard, themes, and transparency pages
-- `cloudflare-app/worker/scanner.ts` — scan engine and provider orchestration
-- `cloudflare-app/worker/index.ts` — Worker entry point and response security
-- `cloudflare-app/tests/` — application and security regression tests
-- `app.py` — launcher for the same `cloudflare-app` development server
+## Security and privacy
 
-## Production
+- Provider credentials remain in the Worker environment and are not returned to the browser.
+- Request bodies and URL counts are bounded before analysis.
+- Private, local, reserved, credential-bearing, and sensitive tokenized URLs are not sent to external providers.
+- Cross-site writes, unsupported methods, and unexpected content types are rejected.
+- Fresh VirusTotal submissions require explicit consent and a valid Turnstile token when Turnstile is enabled.
+- Submitted message text is processed for the request and is not intentionally stored in an application database.
 
-The production Worker is deployed at:
+URLs may be shared with configured reputation providers. The interface identifies when a check uses an external service.
 
-[https://scam.shield-security.workers.dev](https://scam.shield-security.workers.dev)
+## Limitations
 
-Provider credentials must remain Cloudflare Worker secrets. Do not place production secret values in source files or browser code.
+ScamShield is a triage tool, not a guarantee. New domains may not yet appear in reputation feeds, legitimate messages can contain suspicious language, and targeted scams can avoid known patterns. Financial requests, login prompts, and identity checks should still be verified through an independently found official channel.
+
+## Repository structure
+
+```text
+ScamShield/
+├── app.py                         # Optional local launcher
+├── README.md
+└── cloudflare-app/
+    ├── app/                       # Interface and information pages
+    ├── public/                    # Favicon and social preview image
+    ├── tests/                     # Regression and security tests
+    ├── worker/                    # Worker entry point and scan engine
+    ├── package.json
+    └── vite.config.ts
+```
+
+## Deployment
+
+Build and deploy from `cloudflare-app/`:
+
+```powershell
+pnpm run build
+pnpm run deploy
+```
+
+The public deployment is available at [scam.shield-security.workers.dev](https://scam.shield-security.workers.dev/).

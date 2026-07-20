@@ -4917,3 +4917,68 @@ html {
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep the original score ring, but give its center readout more room. */
+.risk-visual > div {
+  width: 138px;
+  max-width: calc(100% - 16px);
+  height: 112px;
+  min-height: 112px;
+  padding: 13px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 7px;
+  border-color: color-mix(in srgb, var(--risk-color) 24%, var(--line));
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--risk-color) 10%, transparent), transparent 58%),
+    var(--surface);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 7%, transparent),
+    0 9px 24px color-mix(in srgb, var(--risk-color) 9%, transparent);
+}
+
+.risk-visual > div .risk-symbol {
+  position: static;
+  flex: 0 0 26px;
+}
+
+.risk-score-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.risk-score-value strong,
+.risk-visual .risk-score-value strong {
+  margin: 0;
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.risk-score-value small,
+.risk-visual .risk-score-value small {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+@media (max-width: 520px) {
+  .risk-visual > div {
+    width: 132px;
+    max-width: calc(100% - 14px);
+    height: 106px;
+    min-height: 106px;
+    padding-inline: 13px;
+  }
+
+  .risk-score-value strong,
+  .risk-visual .risk-score-value strong {
+    font-size: 32px;
+  }
+}

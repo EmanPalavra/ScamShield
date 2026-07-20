@@ -1,8 +1,4 @@
-"""Compatibility launcher for the single ScamShield Cloudflare application.
-
-Running ``python app.py`` from the repository root starts the current app in
-``cloudflare-app``. The retired Flask implementation no longer lives here.
-"""
+"""Start the ScamShield development server from the repository root."""
 
 from __future__ import annotations
 
@@ -32,17 +28,8 @@ def find_package_command() -> list[str] | None:
         return [npm]
 
     local_candidates = [
-        Path.home()
-        / ".cache"
-        / "codex-runtimes"
-        / "codex-primary-runtime"
-        / "dependencies"
-        / "bin"
-        / "fallback"
-        / "pnpm.cmd",
-        Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
-        / "nodejs"
-        / "npm.cmd",
+        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "nodejs" / "npm.cmd",
+        Path(os.environ.get("APPDATA", "")) / "npm" / "pnpm.cmd",
     ]
     for candidate in local_candidates:
         if candidate.is_file():
@@ -52,20 +39,10 @@ def find_package_command() -> list[str] | None:
 
 
 def build_child_environment() -> dict[str, str]:
-    """Ensure package scripts can resolve Node even in a bundled runtime."""
+    """Ensure package scripts can resolve a standard Windows Node installation."""
     environment = os.environ.copy()
     node_candidates = [
         shutil.which("node") or shutil.which("node.exe"),
-        str(
-            Path.home()
-            / ".cache"
-            / "codex-runtimes"
-            / "codex-primary-runtime"
-            / "dependencies"
-            / "node"
-            / "bin"
-            / "node.exe"
-        ),
         str(
             Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
             / "nodejs"
