@@ -22,10 +22,6 @@ export const metadata: Metadata = {
     },
     description:
       "Explainable scam risk analysis with message heuristics, URL inspection, live reputation providers, and consent-based VirusTotal analysis.",
-    icons: {
-      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-      shortcut: "/favicon.svg",
-    },
     openGraph: {
       title: "ScamShield — Pause before you trust the message",
       description: "Check suspicious messages and links with explainable risk signals and clear next steps.",
@@ -48,6 +44,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" />
+      </head>
       <body className={`${inter.variable} ${orbitron.variable}`}>
         {children}
       </body>

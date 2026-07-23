@@ -93,7 +93,16 @@ export function InfoShell({
 
             <aside className="info-visual" aria-label={`${visual.label} summary`}>
               <div className="info-visual-top"><span>{visual.label}</span><b>{visual.status}</b></div>
-              <div className="info-visual-orbit" aria-hidden="true"><i /><i /><span>{visual.code}</span></div>
+              <div className="info-visual-stage" aria-hidden="true">
+                <i className="info-orbit info-orbit-outer"><span /></i>
+                <i className="info-orbit info-orbit-inner"><span /></i>
+                <div className="info-visual-core">
+                  <small>SCAMSHIELD</small>
+                  <strong>{visual.code}</strong>
+                  <em>ACTIVE</em>
+                </div>
+                <span className="info-scan-line" />
+              </div>
               <strong>{visual.title}</strong>
               <p>{visual.detail}</p>
               <div className="info-visual-meter" aria-hidden="true"><span /><span /><span /><span /></div>

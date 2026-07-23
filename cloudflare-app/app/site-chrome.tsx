@@ -15,6 +15,10 @@ const navigation = [
   { href: "/limitations", label: "Limitations" },
 ];
 
+export function ScamShieldLogoMark({ className = "" }: { className?: string }) {
+  return <span className={`m2-logo ${className}`.trim()} aria-hidden="true" />;
+}
+
 function getThemeSnapshot(): Theme {
   const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
   if (savedTheme === "dark" || savedTheme === "light") return savedTheme;
@@ -46,7 +50,7 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
   return (
     <header className="site-header">
       <Link className="brand" href="/" aria-label="ScamShield home">
-        <span className="brand-mark" aria-hidden="true"><span>S</span></span>
+        <span className="brand-mark" aria-hidden="true"><ScamShieldLogoMark /></span>
         <span className="brand-name">SCAMSHIELD</span>
       </Link>
       <nav aria-label="Main navigation">

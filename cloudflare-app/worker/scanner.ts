@@ -272,6 +272,31 @@ const impersonationPatterns = [
   /copyright.{0,50}(?:apple|microsoft|google|amazon)/i,
 ];
 
+const secrecyPatterns = [
+  /(?:do not|don['’]t|never).{0,35}(?:tell|contact|call|inform|share).{0,35}(?:bank|family|police|employer|anyone)/i,
+  /(?:keep|this is).{0,25}(?:secret|confidential|between us)/i,
+  /(?:move|continue|contact me).{0,40}(?:whatsapp|telegram|signal app|private chat)/i,
+  /(?:ne govori|nemoj re[cć]i|ne kontaktiraj).{0,35}(?:banci|policiji|porodici|nikome)/i,
+];
+
+const authorityPatterns = [
+  /(?:ceo|director|manager|boss|police|tax office|irs|court|government).{0,90}(?:urgent|transfer|payment|gift card|confidential|warrant|arrest)/i,
+  /(?:i am|this is|speaking on behalf of).{0,45}(?:your boss|the ceo|the bank|the police|support|security team)/i,
+  /(?:policija|sud|porezna|direktor|šef|sef).{0,80}(?:hitno|uplati|transfer|kazna|uhap|povjerljivo)/i,
+];
+
+const evasionPatterns = [
+  /\b(?:p[\s._-]*a[\s._-]*s[\s._-]*s[\s._-]*w[\s._-]*o[\s._-]*r[\s._-]*d|l[\s._-]*o[\s._-]*g[\s._-]*i[\s._-]*n)\b/i,
+  /\b(?:b[i1!]t[c(]oin|cr[y¥]pt[o0]|g[i1!]ft[\s._-]*card|pa[y¥]pa[l1])\b/i,
+  /[\u200B-\u200D\u2060\uFEFF]/,
+];
+
+const benignContextPatterns = [
+  /(?:security awareness|training example|phishing simulation|scam example|educational example)/i,
+  /(?:do not click|do not reply|never share).{0,80}(?:suspicious|scam|phishing|unknown)/i,
+  /(?:reported|marked|identified).{0,30}(?:as )?(?:a )?(?:scam|phishing)/i,
+];
+
 const suspiciousTlds = new Set([
   "zip",
   "mov",
@@ -317,11 +342,7 @@ function isEnabled(value: string | undefined): boolean {
 }
 
 function getClientIp(request: Request): string {
-  return (
-    request.headers.get("CF-Connecting-IP") ??
-    request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ??
-    "local"
-  );
+  return request.headers.get("CF-Connecting-IP") ?? "local";
 }
 
 async function getRateKey(request: Request, action: string) {
@@ -654,8 +675,26 @@ function countPatternMatches(message: string, patterns: RegExp[]) {
   return patterns.reduce((count, pattern) => count + (pattern.test(message) ? 1 : 0), 0);
 }
 
+function normalizeForDetection(message: string) {
+  const normalized = message
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const deobfuscated = normalized
+    .replace(/(?<=\p{L})[._-](?=\p{L})/gu, "")
+    .replace(/[＠]/g, "@")
+    .replace(/0/g, "o")
+    .replace(/[1!|]/g, "i")
+    .replace(/3/g, "e")
+    .replace(/[4@]/g, "a")
+    .replace(/[5$]/g, "s")
+    .replace(/7/g, "t");
+  return deobfuscated === normalized ? normalized : `${normalized} ${deobfuscated}`;
+}
+
 function messageAnalysis(message: string, urls: string[]) {
-  const normalizedMessage = message.normalize("NFKC").replace(/\s+/g, " ").trim();
+  const normalizedMessage = normalizeForDetection(message);
   const categoryScores = categoryRules.map((rule) => {
     const hits = countPatternMatches(normalizedMessage, rule.patterns);
     return { type: rule.type, score: hits * rule.weight, hits };
@@ -669,10 +708,14 @@ function messageAnalysis(message: string, urls: string[]) {
   const rewardHits = countPatternMatches(normalizedMessage, rewardPatterns);
   const callToActionHits = countPatternMatches(normalizedMessage, callToActionPatterns);
   const impersonationHits = countPatternMatches(normalizedMessage, impersonationPatterns);
+  const secrecyHits = countPatternMatches(normalizedMessage, secrecyPatterns);
+  const authorityHits = countPatternMatches(normalizedMessage, authorityPatterns);
+  const evasionHits = countPatternMatches(message, evasionPatterns);
+  const benignContextHits = countPatternMatches(normalizedMessage, benignContextPatterns);
   const uppercaseWords = message.match(/\b[A-ZČĆŽŠĐ]{4,}\b/g)?.length ?? 0;
   const exclamations = Math.min(3, (message.match(/!/g) ?? []).length);
 
-  let score = 5;
+  let score = urls.length ? 8 : 4;
   score += Math.min(30, categoryScores.reduce((sum, category) => sum + category.score, 0));
   score += Math.min(16, urgencyHits * 8);
   score += Math.min(20, credentialHits * 10);
@@ -681,13 +724,36 @@ function messageAnalysis(message: string, urls: string[]) {
   score += Math.min(14, rewardHits * 7);
   score += Math.min(12, callToActionHits * 4);
   score += Math.min(10, impersonationHits * 5);
-  score += Math.min(6, uppercaseWords * 2);
+  score += Math.min(12, secrecyHits * 6);
+  score += Math.min(12, authorityHits * 6);
+  score += Math.min(10, evasionHits * 5);
+  score += Math.min(4, uppercaseWords);
   score += exclamations * 2;
-  if (urls.length) score += 7;
-  const combinedSocialSignals = urgencyHits + credentialHits + paymentHits + consequenceHits + rewardHits + callToActionHits + impersonationHits;
+  const independentSignalGroups = [
+    urgencyHits,
+    credentialHits,
+    paymentHits,
+    consequenceHits,
+    rewardHits,
+    callToActionHits,
+    impersonationHits,
+    secrecyHits,
+    authorityHits,
+    evasionHits,
+  ].filter((hits) => hits > 0).length;
   const strongestCategoryHits = categoryScores[0]?.hits ?? 0;
-  if (strongestCategoryHits >= 2 && combinedSocialSignals >= 3) score = Math.max(score, 72);
-  else if (strongestCategoryHits >= 1 && (combinedSocialSignals >= 2 || (urls.length > 0 && callToActionHits > 0))) score = Math.max(score, 45);
+  if (credentialHits && callToActionHits && (urgencyHits || consequenceHits || urls.length)) score += 15;
+  if (paymentHits && (secrecyHits || authorityHits || rewardHits)) score += 14;
+  if (paymentHits && secrecyHits && authorityHits) score = Math.max(score, 78);
+  if (urls.length && (credentialHits || paymentHits) && callToActionHits) score += 10;
+  if (evasionHits && independentSignalGroups >= 2) score += 8;
+  if (strongestCategoryHits >= 2 && independentSignalGroups >= 3) score = Math.max(score, 76);
+  else if (strongestCategoryHits >= 1 && independentSignalGroups >= 3) score = Math.max(score, 62);
+  else if (strongestCategoryHits >= 1 && (independentSignalGroups >= 2 || (urls.length > 0 && callToActionHits > 0))) score = Math.max(score, 46);
+  else if (independentSignalGroups >= 4) score = Math.max(score, 58);
+  if (benignContextHits && !callToActionHits && !paymentHits && !credentialHits && !urls.length) {
+    score = Math.max(2, score - 22);
+  }
 
   const reasons: string[] = [];
   if (categoryScores[0]?.hits) reasons.push(`The wording matches a common ${categoryScores[0].type.toLowerCase()} pattern.`);
@@ -698,6 +764,9 @@ function messageAnalysis(message: string, urls: string[]) {
   if (rewardHits) reasons.push("It uses a reward, payout, guaranteed return, or unusually attractive offer as a lure.");
   if (callToActionHits) reasons.push("It pushes the recipient toward an immediate reply, call, payment, registration, or linked page.");
   if (impersonationHits) reasons.push("The wording imitates a recognizable company or official support team.");
+  if (secrecyHits) reasons.push("It tries to isolate the recipient or move the conversation away from trusted verification channels.");
+  if (authorityHits) reasons.push("It invokes authority or workplace hierarchy to make an unusual request feel mandatory.");
+  if (evasionHits) reasons.push("The wording appears intentionally obfuscated to evade ordinary security filters.");
   if (uppercaseWords || exclamations >= 2) reasons.push("The formatting uses pressure signals such as capitals or repeated exclamation marks.");
   if (urls.length) reasons.push(`${urls.length} link${urls.length === 1 ? " was" : "s were"} found and checked separately.`);
 
@@ -767,6 +836,30 @@ function messageAnalysis(message: string, urls: string[]) {
         ? `${impersonationHits} phrase associated with brand or support-team impersonation was detected.`
         : "No strong brand or official-support impersonation phrase was detected.",
     },
+    {
+      name: "Secrecy & isolation",
+      count: secrecyHits,
+      state: secrecyHits > 0 ? "danger" : "clear",
+      detail: secrecyHits
+        ? `${secrecyHits} instruction${secrecyHits === 1 ? "" : "s"} to hide the request or leave trusted channels were detected.`
+        : "No instruction to keep the request secret or avoid trusted contacts was detected.",
+    },
+    {
+      name: "Authority pressure",
+      count: authorityHits,
+      state: authorityHits > 0 ? "warning" : "clear",
+      detail: authorityHits
+        ? `${authorityHits} authority or workplace-pressure pattern${authorityHits === 1 ? " was" : "s were"} detected.`
+        : "No unusual request backed by authority or workplace hierarchy was detected.",
+    },
+    {
+      name: "Filter evasion",
+      count: evasionHits,
+      state: evasionHits > 0 ? "warning" : "clear",
+      detail: evasionHits
+        ? `${evasionHits} obfuscation pattern${evasionHits === 1 ? " was" : "s were"} detected.`
+        : "No deliberate word or character obfuscation was detected.",
+    },
   ] as const;
 
   const strongestCategory = categoryScores[0]?.hits ? categoryScores[0].type : null;
@@ -774,15 +867,17 @@ function messageAnalysis(message: string, urls: string[]) {
     ? "Credential phishing / account takeover"
     : paymentHits && (urgencyHits || consequenceHits)
       ? "Payment-pressure / advance-fee scam"
-      : rewardHits && paymentHits
-        ? "Reward / payment scam"
-        : impersonationHits && (callToActionHits || urls.length)
-          ? "Brand impersonation / social engineering"
-          : urls.length && callToActionHits
-            ? "Suspicious link solicitation"
-            : urgencyHits || consequenceHits
-              ? "Social-engineering pressure"
-              : "No specific scam category identified";
+      : authorityHits && paymentHits
+        ? "Authority impersonation / payment fraud"
+        : rewardHits && paymentHits
+          ? "Reward / payment scam"
+          : impersonationHits && (callToActionHits || urls.length)
+            ? "Brand impersonation / social engineering"
+            : urls.length && callToActionHits
+              ? "Suspicious link solicitation"
+              : urgencyHits || consequenceHits
+                ? "Social-engineering pressure"
+                : "No specific scam category identified";
 
   const words = message.match(/\S+/g)?.length ?? 0;
   const lines = message ? message.split(/\r?\n/).length : 0;
@@ -1167,7 +1262,7 @@ async function runScan(message: string, mode: "quick" | "deep", env: ScannerEnv,
         { name: "RDAP domain age", state: "not-run", label: "No domain", detail: "No domain was found in the supplied text.", configured: true, subject: "Message only" },
         {
           name: "VirusTotal",
-          state: mode === "deep" ? "not-run" : "not-run",
+          state: "not-run",
           label: "No URL",
           detail: "VirusTotal analyzes URLs, and this input contains no link.",
           configured: Boolean(env.VIRUSTOTAL_API_KEY),
@@ -1211,7 +1306,11 @@ async function runScan(message: string, mode: "quick" | "deep", env: ScannerEnv,
         consequencePatterns.length +
         rewardPatterns.length +
         callToActionPatterns.length +
-        impersonationPatterns.length,
+        impersonationPatterns.length +
+        secrecyPatterns.length +
+        authorityPatterns.length +
+        evasionPatterns.length +
+        benignContextPatterns.length,
       messageStats: local.stats,
       signals: local.signals,
       categoryMatches: local.categories,

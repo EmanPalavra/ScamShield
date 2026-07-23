@@ -1,8 +1,8 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { SiteFooter, SiteHeader } from "./site-chrome";
+import type { CSSProperties, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ScamShieldLogoMark, SiteFooter, SiteHeader } from "./site-chrome";
 
 type RiskLevel = "Low" | "Medium" | "High";
 type ProviderState = "clear" | "warning" | "danger" | "unavailable" | "not-run";
@@ -176,11 +176,19 @@ function formatDomainAge(days: number | null) {
 
 function wait(milliseconds: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(resolve, milliseconds);
-    signal.addEventListener("abort", () => {
+    if (signal.aborted) {
+      reject(new DOMException("Polling cancelled", "AbortError"));
+      return;
+    }
+    const onAbort = () => {
       window.clearTimeout(timer);
       reject(new DOMException("Polling cancelled", "AbortError"));
-    }, { once: true });
+    };
+    const timer = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -207,10 +215,20 @@ export function ScanApp() {
   const deepPollController = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    fetch("/api/config")
-      .then((response) => response.json() as Promise<RuntimeConfig>)
-      .then(setConfig)
-      .catch(() => setConfig(null));
+    const controller = new AbortController();
+    const loadConfig = async () => {
+      try {
+        const response = await fetch("/api/config", { signal: controller.signal });
+        if (!response.ok) throw new Error("Runtime configuration is unavailable.");
+        setConfig((await response.json()) as RuntimeConfig);
+      } catch (configError) {
+        if (!(configError instanceof DOMException && configError.name === "AbortError")) {
+          setConfig(null);
+        }
+      }
+    };
+    void loadConfig();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -375,19 +393,20 @@ export function ScanApp() {
     try {
       for (let attempt = 0; attempt < 18; attempt += 1) {
         await wait(nextDelay, controller.signal);
-      try {
-          const response = await fetch(`/api/deep/status?id=${encodeURIComponent(analysisId)}`, {
-            signal: controller.signal,
-            headers: { "x-scamshield-status-token": statusToken },
-          });
-          const payload = (await response.json()) as Partial<DeepJob> & { error?: string; pollAfterMs?: number };
+        const response = await fetch(`/api/deep/status?id=${encodeURIComponent(analysisId)}`, {
+          signal: controller.signal,
+          headers: { "x-scamshield-status-token": statusToken },
+        });
+        const payload = (await response.json()) as Partial<DeepJob> & { error?: string; pollAfterMs?: number };
+
         if (!response.ok) {
-            if (response.status === 429) {
-              nextDelay = Math.max(2_000, Number(response.headers.get("retry-after") ?? 2) * 1_000);
-              continue;
-            }
+          if (response.status === 429) {
+            nextDelay = Math.max(2_000, Number(response.headers.get("retry-after") ?? 2) * 1_000);
+            continue;
+          }
           throw new Error(payload.error ?? "Analysis status could not be retrieved.");
         }
+
         const nextJob: DeepJob = {
           analysisId,
           statusToken,
@@ -397,42 +416,37 @@ export function ScanApp() {
           stats: payload.stats ?? null,
           verdict: payload.verdict ?? null,
           riskState: payload.riskState ?? "pending",
-            startedAt,
-            pollCount: attempt + 1,
-            engineCount: payload.engineCount ?? 0,
-            analyzedAt: payload.analyzedAt ?? null,
+          startedAt,
+          pollCount: attempt + 1,
+          engineCount: payload.engineCount ?? 0,
+          analyzedAt: payload.analyzedAt ?? null,
         };
         setDeepJob(nextJob);
         if (nextJob.completed) return;
-          nextDelay = Math.min(2_500, payload.pollAfterMs ?? 700 + attempt * 180);
-      } catch (pollError) {
-          if (pollError instanceof DOMException && pollError.name === "AbortError") return;
-        setDeepJob((current) => ({
-          analysisId,
-          statusToken,
-          url,
-          status: current?.status ?? "queued",
-          completed: false,
-          stats: current?.stats ?? null,
-          verdict: current?.verdict ?? null,
-          riskState: current?.riskState ?? "pending",
-            startedAt: current?.startedAt ?? startedAt,
-            pollCount: current?.pollCount ?? attempt + 1,
-            engineCount: current?.engineCount ?? 0,
-            analyzedAt: current?.analyzedAt ?? null,
-          error: pollError instanceof Error ? pollError.message : "Analysis tracking failed.",
-        }));
-        return;
+        nextDelay = Math.min(2_500, payload.pollAfterMs ?? 700 + attempt * 180);
       }
-      }
+
       setDeepJob((current) => current ? {
         ...current,
         error: "VirusTotal is still processing this URL. Use Check status to continue without resubmitting it.",
       } : null);
     } catch (pollError) {
-      if (!(pollError instanceof DOMException && pollError.name === "AbortError")) {
-        setDeepJob((current) => current ? { ...current, error: "Analysis tracking was interrupted. Use Check status to resume." } : null);
-      }
+      if (pollError instanceof DOMException && pollError.name === "AbortError") return;
+      setDeepJob((current) => ({
+        analysisId,
+        statusToken,
+        url,
+        status: current?.status ?? "queued",
+        completed: false,
+        stats: current?.stats ?? null,
+        verdict: current?.verdict ?? null,
+        riskState: current?.riskState ?? "pending",
+        startedAt: current?.startedAt ?? startedAt,
+        pollCount: current?.pollCount ?? 0,
+        engineCount: current?.engineCount ?? 0,
+        analyzedAt: current?.analyzedAt ?? null,
+        error: pollError instanceof Error ? pollError.message : "Analysis tracking failed.",
+      }));
     } finally {
       if (deepPollController.current === controller) deepPollController.current = null;
       setDeepTracking(false);
@@ -522,7 +536,7 @@ export function ScanApp() {
             <div className="shield-orbit" aria-hidden="true">
               <span className="orbit orbit-one" />
               <span className="orbit orbit-two" />
-              <div className="hero-shield">S</div>
+              <div className="hero-shield"><ScamShieldLogoMark /></div>
             </div>
             <div className="console-layers">
               <div><span>01</span><p><strong>Language</strong><small>Social-engineering signals</small></p><b>ACTIVE</b></div>

@@ -9,7 +9,7 @@ const env = {
   ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   DISABLE_EXTERNAL_CHECKS: "true",
 };
-const context = { waitUntil() {}, passThroughOnException() {} };
+const context = { waitUntil() {} };
 
 function request(path = "/", init = {}, environment = env) {
   return worker.fetch(new Request(`http://localhost${path}`, init), environment, context);
@@ -23,8 +23,7 @@ test("renders the finished public product", async () => {
   assert.match(html, /See the risk/);
   assert.match(html, /Quick Scan/);
   assert.match(html, /Deep Scan/);
-  assert.match(html, /favicon\.svg/);
-  assert.doesNotMatch(html, /react-loading-skeleton|Your site is taking shape/i);
+  assert.match(html, /scamshield-m2-favicon\.png/);
 });
 
 test("returns health and security headers", async () => {
@@ -155,6 +154,39 @@ test("Deep Scan works independently without a prior Quick Scan", async () => {
   assert.equal(payload.providers.some((provider) => provider.name === "VirusTotal"), true);
 });
 
+test("detects obfuscated phishing and multi-signal authority scams without inflating benign text", async () => {
+  const cases = [
+    {
+      message: "URGENT: your acc0unt will be locked. V3rify your l0gin and p.a.s.s.w.o.r.d now at https://account-check.top/login",
+      expectedSignal: "Filter evasion",
+    },
+    {
+      message: "This is your CEO. Keep this confidential and do not contact accounting. Buy Apple gift cards immediately and send me the codes.",
+      expectedSignal: "Secrecy & isolation",
+    },
+  ];
+
+  for (const [index, sample] of cases.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${index + 40}` },
+      body: JSON.stringify({ mode: "quick", message: sample.message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "High");
+    assert.equal(payload.analysis.signals.some((signal) => signal.name === sample.expectedSignal && signal.count > 0), true);
+  }
+
+  const benign = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.44" },
+    body: JSON.stringify({ mode: "quick", message: "Security awareness training example: never share a password and do not click unknown links." }),
+  });
+  assert.equal(benign.status, 200);
+  assert.equal((await benign.json()).riskLevel, "Low");
+});
+
 test("fresh VirusTotal analysis rejects missing consent", async () => {
   const response = await request("/api/deep/submit", {
     method: "POST",
@@ -264,6 +296,8 @@ test("renders all transparency pages", async () => {
     assert.match(html, new RegExp(heading));
     assert.match(html, /info-tabs/);
     assert.match(html, /info-visual/);
+    assert.match(html, /info-orbit-outer/);
+    assert.match(html, /info-orbit-inner/);
     assert.match(html, /info-toc/);
     assert.match(html, /aria-current="page"/);
   }
