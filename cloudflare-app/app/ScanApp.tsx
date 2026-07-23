@@ -31,6 +31,46 @@ interface LinkReport {
     stats: Record<string, number> | null;
     lastAnalysisDate: number | null;
   } | null;
+  domainIntelligence: {
+    brand: {
+      state: "clear" | "warning" | "danger";
+      suspectedBrand: string | null;
+      officialDomain: string | null;
+      similarity: number;
+      distance: number | null;
+      isTyposquat: boolean;
+      signals: string[];
+    };
+    dns: {
+      state: ProviderState;
+      addresses: string[];
+      ipv6: string[];
+      nameservers: string[];
+      mailServers: string[];
+      cname: string | null;
+      minTtl: number | null;
+      dnssecAuthenticated: boolean | null;
+    };
+    certificate: {
+      state: ProviderState;
+      source: "Certificate Transparency";
+      recordCount: number;
+      activeRecordCount: number;
+      latestExpiry: string | null;
+      issuer: string | null;
+      names: string[];
+    };
+    redirects: {
+      state: ProviderState;
+      checked: boolean;
+      count: number;
+      chain: Array<{ url: string; domain: string; status: number }>;
+      finalUrl: string;
+      crossedDomains: boolean;
+      bodyFetched: false;
+      detail: string;
+    };
+  };
   technical: {
     protocol: "HTTP" | "HTTPS";
     tld: string;
@@ -149,6 +189,14 @@ declare global {
 }
 
 const analystTabs: AnalystTab[] = ["Evidence", "URLs", "Providers", "IOCs"];
+const iocLabels: Record<keyof ScanResult["iocs"], string> = {
+  urls: "URLs",
+  domains: "Domains",
+  emails: "Email addresses",
+  phones: "Phone numbers",
+  cryptoWallets: "Crypto wallets",
+};
+
 function riskIcon(level: RiskLevel) {
   if (level === "High") return "×";
   if (level === "Medium") return "!";
@@ -231,6 +279,32 @@ export function ScanApp() {
     void loadConfig();
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!result || loadingMode) return;
+    let positionFrame = 0;
+    const layoutFrame = window.requestAnimationFrame(() => {
+      positionFrame = window.requestAnimationFrame(() => {
+        const target = resultsRef.current;
+        if (!target) return;
+        const header = document.querySelector<HTMLElement>(".site-header");
+        const headerRect = header?.getBoundingClientRect();
+        const stickyTop = header ? Number.parseFloat(window.getComputedStyle(header).top) || 0 : 0;
+        const gap = window.innerWidth <= 720 ? 14 : 20;
+        const top = window.scrollY + target.getBoundingClientRect().top - (headerRect?.height ?? 0) - stickyTop - gap;
+
+        target.focus({ preventScroll: true });
+        window.scrollTo({
+          top: Math.max(0, top),
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        });
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(layoutFrame);
+      window.cancelAnimationFrame(positionFrame);
+    };
+  }, [loadingMode, result]);
 
   useEffect(() => {
     if (!config?.turnstileConfigured || !config.turnstileSiteKey || !turnstileContainer.current) return;
@@ -339,7 +413,6 @@ export function ScanApp() {
       if (!response.ok) throw new Error(payload.error ?? "The scan could not be completed.");
       setResult(payload);
       setSelectedDeepUrl(payload.deepScan.urls[0] ?? "");
-      window.setTimeout(() => resultsRef.current?.focus({ preventScroll: false }), 60);
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : "The scan could not be completed.");
     } finally {
@@ -356,23 +429,23 @@ export function ScanApp() {
   async function copyReport() {
     if (!result) return;
     const report = [
-      `ScamShield report — ${result.riskLevel} risk (${result.riskPercent}%)`,
-      `Assessment: ${result.riskLabel}`,
-      `Pattern: ${result.scamType}`,
+      `${t("ScamShield report")} — ${t(result.riskLevel)} ${t("risk")} (${result.riskPercent}%)`,
+      `${t("Assessment")}: ${t(result.riskLabel)}`,
+      `${t("Pattern")}: ${t(result.scamType)}`,
       "",
-      "Key reasons:",
-      ...result.reasons.map((reason) => `- ${reason}`),
+      `${t("Key reasons")}:`,
+      ...result.reasons.map((reason) => `- ${t(reason)}`),
       "",
-      "Recommended actions:",
-      ...result.actions.map((action) => `- ${action}`),
+      `${t("Recommended actions")}:`,
+      ...result.actions.map((action) => `- ${t(action)}`),
       "",
-      `Input: ${result.analysis.inputType}`,
-      `Rules evaluated: ${result.analysis.rulesEvaluated}`,
-      `Provider checks: ${result.analysis.providerCoverage.completed}/${result.analysis.providerCoverage.total} completed`,
-      `Scan time: ${formatDuration(result.analysis.timing.totalMs)}`,
+      `${t("Input")}: ${t(result.analysis.inputType)}`,
+      `${t("Rules evaluated")}: ${result.analysis.rulesEvaluated}`,
+      `${t("Provider checks")}: ${result.analysis.providerCoverage.completed}/${result.analysis.providerCoverage.total} ${t("completed")}`,
+      `${t("Scan time")}: ${formatDuration(result.analysis.timing.totalMs)}`,
       "",
-      `Scanned: ${new Date(result.scannedAt).toLocaleString()}`,
-      "This is a risk estimate, not a guarantee.",
+      `${t("Scanned")}: ${new Date(result.scannedAt).toLocaleString(locale)}`,
+      t("This is a risk estimate, not a guarantee."),
     ].join("\n");
     try {
       await navigator.clipboard.writeText(report);
@@ -505,6 +578,18 @@ export function ScanApp() {
   }
 
   const detectedSignals = result?.analysis.signals.filter((signal) => signal.count > 0).length ?? 0;
+  const signalGroups = result
+    ? ([
+        { state: "danger", label: "High-confidence signals" },
+        { state: "warning", label: "Supporting warnings" },
+        { state: "clear", label: "Clear or neutral signals" },
+      ] as const)
+        .map((group) => ({
+          ...group,
+          signals: result.analysis.signals.filter((signal) => signal.state === group.state),
+        }))
+        .filter((group) => group.signals.length > 0)
+    : [];
   const resultHeadline = result?.riskLevel === "High"
     ? "Do not interact with this message"
     : result?.riskLevel === "Medium"
@@ -524,7 +609,7 @@ export function ScanApp() {
             </p>
             <div className="trust-row" aria-label="Service qualities">
               <span><b aria-hidden="true">✓</b> No account required</span>
-              <span><b aria-hidden="true">✓</b> Links are never opened</span>
+              <span><b aria-hidden="true">✓</b> Page content is never rendered</span>
               <span><b aria-hidden="true">✓</b> Fresh scans require consent</span>
             </div>
           </div>
@@ -552,7 +637,7 @@ export function ScanApp() {
             <div>
               <p className="section-kicker">Security workspace</p>
               <h2 id="scanner-title">Analyze a message or URL</h2>
-              <p className="scanner-intro">Use the complete message for a more accurate result. ScamShield analyzes context without visiting suspicious destinations.</p>
+              <p className="scanner-intro">Use the complete message for a more accurate result. ScamShield analyzes context without rendering suspicious destinations.</p>
             </div>
             <div className="privacy-chip"><span aria-hidden="true">◆</span><div><strong>Private by default</strong><small>Processed only for this scan</small></div></div>
           </div>
@@ -603,8 +688,8 @@ export function ScanApp() {
                 <span className="mode-icon" aria-hidden="true">D</span>
                 <span className="mode-copy">
                   <span className="mode-title"><strong>Deep Scan</strong><em>More intelligence</em></span>
-                  <small>Adds the latest existing VirusTotal report. It does not submit a new URL without your consent.</small>
-                  <span className="mode-features"><b>Everything in Quick</b><b>VirusTotal history</b></span>
+                  <small>Adds existing VirusTotal history and safely inspects redirect headers. It does not submit a new URL without your consent.</small>
+                  <span className="mode-features"><b>Everything in Quick</b><b>Redirect path</b><b>VirusTotal history</b></span>
                 </span>
                 <span className="mode-arrow" aria-hidden="true">→</span>
               </button>
@@ -638,15 +723,15 @@ export function ScanApp() {
           <section className={`results risk-${result.riskLevel.toLowerCase()}`} ref={resultsRef} tabIndex={-1} aria-labelledby="result-title">
             <div className="results-topline">
               <div>
-                <p className="section-kicker">{result.scanMode === "deep" ? "Deep intelligence report" : "Rapid risk report"}</p>
+                <p className="section-kicker">{t(result.scanMode === "deep" ? "Deep intelligence report" : "Rapid risk report")}</p>
                 <h2 id="result-title">{t(resultHeadline)}</h2>
               </div>
               <div className="result-actions">
-                <div className="view-switch" aria-label="Result detail level">
-                  <button type="button" className={view === "simple" ? "active" : ""} onClick={() => setView("simple")} aria-pressed={view === "simple"}>Overview</button>
-                  <button type="button" className={view === "analyst" ? "active" : ""} onClick={() => setView("analyst")} aria-pressed={view === "analyst"}>Technical</button>
+                <div className="view-switch" aria-label={t("Result detail level")}>
+                  <button type="button" className={view === "simple" ? "active" : ""} onClick={() => setView("simple")} aria-pressed={view === "simple"}>{t("Overview")}</button>
+                  <button type="button" className={view === "analyst" ? "active" : ""} onClick={() => setView("analyst")} aria-pressed={view === "analyst"}>{t("Technical")}</button>
                 </div>
-                <button className="copy-button" type="button" onClick={() => void copyReport()}>{copyLabel}</button>
+                <button className="copy-button" type="button" onClick={() => void copyReport()}>{t(copyLabel)}</button>
               </div>
             </div>
 
@@ -671,7 +756,7 @@ export function ScanApp() {
                       ? "The message contains signals that deserve independent verification before you reply, click, pay, or share information."
                       : "No strong threat was confirmed, but reputation sources cannot guarantee that a new or targeted scam is safe.")}
                 </p>
-                <div className="verdict-command"><span>Recommended now</span><strong>{t(result.actions[0])}</strong></div>
+                <div className="verdict-command"><span>{t("Recommended now")}</span><strong>{t(result.actions[0])}</strong></div>
               </div>
             </div>
 
@@ -688,13 +773,13 @@ export function ScanApp() {
               <div className="simple-dashboard">
                 <div className="simple-grid">
                   <article className="result-list-card findings-card">
-                    <div className="card-title"><span aria-hidden="true">!</span><div><p>Why it was flagged</p><h3>Key findings</h3></div></div>
+                    <div className="card-title"><span aria-hidden="true">!</span><div><p>{t("Why it was flagged")}</p><h3>{t("Key findings")}</h3></div><b className="card-stat">{t(`${result.reasons.length} evidence signals`)}</b></div>
                     <ol className="finding-list">
                       {result.reasons.map((reason, index) => <li key={`${reason}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p>{t(reason)}</p></li>)}
                     </ol>
                   </article>
                   <article className="result-list-card action-card">
-                    <div className="card-title"><span aria-hidden="true">→</span><div><p>Recommended response</p><h3>What to do next</h3></div></div>
+                    <div className="card-title"><span aria-hidden="true">→</span><div><p>{t("Recommended response")}</p><h3>{t("What to do next")}</h3></div><b className="card-stat">{t(`${result.actions.length} safety steps`)}</b></div>
                     <ol className="action-list">
                       {result.actions.map((action, index) => <li key={action}><span>{index + 1}</span><p>{t(action)}</p></li>)}
                     </ol>
@@ -702,26 +787,33 @@ export function ScanApp() {
                 </div>
 
                 <div className="inspection-grid">
-                  <article className="inspection-card">
-                    <div className="inspection-head"><div><p>Message analysis</p><h3>Signals inspected</h3></div><span>{t(`${detectedSignals} detected`)}</span></div>
-                    <div className="signal-list">
-                      {result.analysis.signals.map((signal) => (
-                        <div key={signal.name} className={`signal-row signal-${signal.state}`}>
-                          <span className="signal-state" aria-hidden="true">{signal.state === "clear" ? "✓" : "!"}</span>
-                          <div><strong>{t(signal.name)}</strong><p>{t(signal.detail)}</p></div>
-                          <b>{signal.count || t("Clear")}</b>
-                        </div>
+                  <article className="inspection-card signals-inspection">
+                    <div className="inspection-head"><div><p>{t("Message analysis")}</p><h3>{t("Signals inspected")}</h3><small>{t("Local rule analysis")}</small></div><span>{t(`${detectedSignals} detected`)}</span></div>
+                    <div className="signal-list signal-groups">
+                      {signalGroups.map((group) => (
+                        <section key={group.state} className={`signal-group signal-group-${group.state}`} aria-label={t(group.label)}>
+                          <div className="signal-group-head"><span>{t(group.label)}</span><b>{group.signals.length}</b></div>
+                          <div className="signal-group-grid">
+                            {group.signals.map((signal) => (
+                              <div key={signal.name} className={`signal-row signal-${signal.state}`}>
+                                <span className="signal-state" aria-hidden="true">{signal.state === "clear" ? "✓" : "!"}</span>
+                                <div><strong>{t(signal.name)}</strong><p>{t(signal.detail)}</p></div>
+                                <b>{signal.count || t("Clear")}</b>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
                       ))}
                     </div>
                   </article>
 
-                  <article className="inspection-card">
-                    <div className="inspection-head"><div><p>Threat intelligence</p><h3>Provider checks</h3></div><span>{t(`${result.analysis.providerCoverage.completed} completed`)}</span></div>
+                  <article className="inspection-card providers-inspection">
+                    <div className="inspection-head"><div><p>Threat intelligence</p><h3>Provider checks</h3><small>{t("Reputation and infrastructure")}</small></div><span>{t(`${result.analysis.providerCoverage.completed} completed`)}</span></div>
                     <div className="compact-providers">
                       {result.providers.map((provider, index) => (
                         <div key={`${provider.name}-${provider.subject}-${index}`} className={`compact-provider provider-${provider.state}`}>
                           <span className="provider-icon" aria-hidden="true">{providerIcon(provider.state)}</span>
-                          <div><strong>{provider.name}</strong><small>{provider.subject}</small><p>{t(provider.detail)}</p></div>
+                          <div><strong>{t(provider.name)}</strong><small>{provider.subject}</small><p>{t(provider.detail)}</p></div>
                           <b>{t(provider.label)}</b>
                         </div>
                       ))}
@@ -744,6 +836,40 @@ export function ScanApp() {
                         <span><b>{link.technical.queryParameters}</b> query parameters</span>
                         <span><b>{link.technical.isPunycode ? "Yes" : "No"}</b> Punycode</span>
                       </div>
+                      <div className="domain-intel-heading">
+                        <div><span>{t("Domain Intelligence")}</span><strong>{t("Infrastructure and impersonation checks")}</strong></div>
+                        <small>{t("Evidence is combined; no single signal proves safety.")}</small>
+                      </div>
+                      <div className="domain-intel-grid">
+                        <article className={`domain-intel-card intel-${link.domainIntelligence.brand.state}`}>
+                          <div className="domain-intel-top"><span>{t("Brand similarity")}</span><b>{link.domainIntelligence.brand.isTyposquat ? `${link.domainIntelligence.brand.similarity}%` : t("Clear")}</b></div>
+                          <strong>{link.domainIntelligence.brand.suspectedBrand ?? t("No close brand match")}</strong>
+                          <p>{link.domainIntelligence.brand.isTyposquat && link.domainIntelligence.brand.officialDomain
+                            ? `${t("Official domain")}: ${link.domainIntelligence.brand.officialDomain}`
+                            : t("No monitored brand look-alike was detected.")}</p>
+                        </article>
+                        <article className={`domain-intel-card intel-${link.domainIntelligence.dns.state}`}>
+                          <div className="domain-intel-top"><span>{t("DNS footprint")}</span><b>{link.domainIntelligence.dns.state === "clear" ? t("Resolved") : t(link.domainIntelligence.dns.state)}</b></div>
+                          <strong>{link.domainIntelligence.dns.addresses.length + link.domainIntelligence.dns.ipv6.length} {t("address records")}</strong>
+                          <p>{link.domainIntelligence.dns.nameservers.length} {t("name servers")} · DNSSEC {link.domainIntelligence.dns.dnssecAuthenticated === true ? t("observed") : link.domainIntelligence.dns.dnssecAuthenticated === false ? t("not observed") : t("unknown")}</p>
+                        </article>
+                        <article className={`domain-intel-card intel-${link.domainIntelligence.certificate.state}`}>
+                          <div className="domain-intel-top"><span>{t("Certificate records")}</span><b>CT</b></div>
+                          <strong>{link.domainIntelligence.certificate.activeRecordCount} {t("active records")}</strong>
+                          <p>{link.domainIntelligence.certificate.issuer
+                            ? `${t("Issuer")}: ${link.domainIntelligence.certificate.issuer}`
+                            : t("No active public record observed.")}</p>
+                        </article>
+                        <article className={`domain-intel-card intel-${link.domainIntelligence.redirects.state}`}>
+                          <div className="domain-intel-top"><span>{t("Redirect path")}</span><b>{link.domainIntelligence.redirects.checked ? link.domainIntelligence.redirects.count : t("Deep only")}</b></div>
+                          <strong>{link.domainIntelligence.redirects.checked
+                            ? link.domainIntelligence.redirects.count === 0 ? t("Direct destination") : `${link.domainIntelligence.redirects.count} ${t("redirects")}`
+                            : t("Not inspected")}</strong>
+                          <p>{link.domainIntelligence.redirects.checked
+                            ? `${t("Final domain")}: ${new URL(link.domainIntelligence.redirects.finalUrl).hostname}`
+                            : t("Deep Scan checks headers without rendering the page.")}</p>
+                        </article>
+                      </div>
                       <ul>{link.reasons.map((reason) => <li key={reason}>{t(reason)}</li>)}</ul>
                       {link.virusTotal?.found && link.virusTotal.stats && (
                         <div className="vt-inline"><span>VirusTotal existing report</span><b>{link.virusTotal.stats.malicious ?? 0} malicious</b><b>{link.virusTotal.stats.suspicious ?? 0} suspicious</b><b>{link.virusTotal.stats.harmless ?? 0} harmless</b></div>
@@ -754,15 +880,15 @@ export function ScanApp() {
               </div>
             ) : (
               <div className="analyst-panel">
-                <div className="analyst-tabs" role="tablist" aria-label="Technical result sections">
+                <div className="analyst-tabs" role="tablist" aria-label={t("Technical result sections")}>
                   {analystTabs.map((tab) => (
-                    <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>
+                    <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{t(tab)}</button>
                   ))}
                 </div>
 
                 {activeTab === "Evidence" && (
                   <div className="tab-content evidence-table" role="tabpanel">
-                    <div className="technical-summary"><span>Local analysis <b>{formatDuration(result.analysis.timing.localAnalysisMs)}</b></span><span>Live checks <b>{formatDuration(result.analysis.timing.liveChecksMs)}</b></span><span>Rules <b>{result.analysis.rulesEvaluated}</b></span><span>Lines <b>{result.analysis.messageStats.lines}</b></span></div>
+                    <div className="technical-summary"><span>{t("Local analysis")} <b>{formatDuration(result.analysis.timing.localAnalysisMs)}</b></span><span>{t("Live checks")} <b>{formatDuration(result.analysis.timing.liveChecksMs)}</b></span><span>{t("Rules")} <b>{result.analysis.rulesEvaluated}</b></span><span>{t("Lines")} <b>{result.analysis.messageStats.lines}</b></span></div>
                     {result.evidence.map((item, index) => (
                       <article key={`${item.source}-${index}`}><span className={`impact impact-${item.impact.toLowerCase()}`}>{t(item.impact)}</span><div><strong>{t(item.source)}</strong><p>{t(item.detail)}</p></div></article>
                     ))}
@@ -773,12 +899,12 @@ export function ScanApp() {
                   <div className="tab-content url-grid" role="tabpanel">
                     {result.links.length ? result.links.map((link) => (
                       <article key={link.url} className="url-card">
-                        <div className="url-card-head"><div><span>Domain</span><strong>{link.domain}</strong></div><b>{link.riskScore}% link risk</b></div>
+                        <div className="url-card-head"><div><span>{t("Domain")}</span><strong>{link.domain}</strong></div><b>{t(`${link.riskScore}% link risk`)}</b></div>
                         <code>{link.url}</code>
-                        <div className="technical-chips"><span>{link.technical.protocol}</span><span>.{link.technical.tld}</span><span>{link.technical.hostnameLength} hostname chars</span><span>{link.technical.isShortener ? "Shortened URL" : "Direct URL"}</span><span>{link.technical.hasUserInfo ? "User-info present" : "No user-info"}</span></div>
+                        <div className="technical-chips"><span>{link.technical.protocol}</span><span>.{link.technical.tld}</span><span>{link.technical.hostnameLength} {t("hostname characters")}</span><span>{t(link.technical.isShortener ? "Shortened URL" : "Direct URL")}</span><span>{t(link.technical.hasUserInfo ? "User-info present" : "No user-info")}</span><span>{t("Brand")}: {link.domainIntelligence.brand.isTyposquat ? link.domainIntelligence.brand.suspectedBrand : t("clear")}</span><span>DNS: {t(link.domainIntelligence.dns.state)}</span><span>CT: {link.domainIntelligence.certificate.activeRecordCount}</span><span>{t("Redirects")}: {link.domainIntelligence.redirects.checked ? link.domainIntelligence.redirects.count : t("Deep only")}</span></div>
                         <ul>{link.reasons.map((reason) => <li key={reason}>{t(reason)}</li>)}</ul>
                       </article>
-                    )) : <p className="empty-state">No URL was found in this message.</p>}
+                    )) : <p className="empty-state">{t("No URL was found in this message.")}</p>}
                   </div>
                 )}
 
@@ -787,7 +913,7 @@ export function ScanApp() {
                     {result.providers.map((provider, index) => (
                       <article key={`${provider.name}-${provider.subject}-${index}`} className={`provider-card provider-${provider.state}`}>
                         <span className="provider-icon" aria-hidden="true">{providerIcon(provider.state)}</span>
-                        <div><span>{provider.subject}</span><h3>{provider.name}</h3><p>{t(provider.detail)}</p></div>
+                        <div><span>{provider.subject}</span><h3>{t(provider.name)}</h3><p>{t(provider.detail)}</p></div>
                         <b>{t(provider.label)}</b>
                       </article>
                     ))}
@@ -796,8 +922,8 @@ export function ScanApp() {
 
                 {activeTab === "IOCs" && (
                   <div className="tab-content ioc-grid" role="tabpanel">
-                    {Object.entries(result.iocs).map(([label, values]) => (
-                      <article key={label}><h3>{label.replace(/([A-Z])/g, " $1")}</h3>{values.length ? values.map((value) => <code key={value}>{value}</code>) : <p>None found</p>}</article>
+                    {(Object.entries(result.iocs) as Array<[keyof ScanResult["iocs"], string[]]>).map(([label, values]) => (
+                      <article key={label}><h3>{t(iocLabels[label])}</h3>{values.length ? values.map((value) => <code key={value}>{value}</code>) : <p>{t("None found")}</p>}</article>
                     ))}
                   </div>
                 )}

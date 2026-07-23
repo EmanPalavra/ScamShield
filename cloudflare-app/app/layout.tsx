@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
         <link rel="icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" sizes="any" />
         <link rel="shortcut icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" />

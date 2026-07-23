@@ -4,11 +4,76 @@ import test from "node:test";
 
 const workerUrl = new URL("../dist/server/index.js", import.meta.url);
 workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-const { default: worker } = await import(workerUrl.href);
+const { default: worker, RateLimiter } = await import(workerUrl.href);
+
+function createDurableObjectContext() {
+  let requests = [];
+  const sql = {
+    exec(query, ...bindings) {
+      if (query.startsWith("DELETE FROM requests")) {
+        requests = requests.filter((timestamp) => timestamp > bindings[0]);
+      } else if (query.startsWith("INSERT INTO requests")) {
+        requests.push(bindings[0]);
+      }
+      return {
+        one() {
+          return {
+            request_count: requests.length,
+            earliest_ms: requests.length ? Math.min(...requests) : null,
+          };
+        },
+      };
+    },
+  };
+  return {
+    storage: {
+      sql,
+      transactionSync(callback) {
+        return callback();
+      },
+    },
+  };
+}
+
+function createRateLimiterNamespace() {
+  const buckets = new Map();
+  return {
+    getByName(name) {
+      return {
+        async check(limit, windowSeconds) {
+          const now = Date.now();
+          const cutoff = now - windowSeconds * 1_000;
+          const current = (buckets.get(name) ?? []).filter((timestamp) => timestamp > cutoff);
+          if (current.length >= limit) {
+            const resetAt = current[0] + windowSeconds * 1_000;
+            buckets.set(name, current);
+            return {
+              allowed: false,
+              limit,
+              remaining: 0,
+              retryAfter: Math.max(1, Math.ceil((resetAt - now) / 1_000)),
+              resetAt,
+            };
+          }
+          current.push(now);
+          buckets.set(name, current);
+          return {
+            allowed: true,
+            limit,
+            remaining: limit - current.length,
+            retryAfter: 0,
+            resetAt: current[0] + windowSeconds * 1_000,
+          };
+        },
+      };
+    },
+  };
+}
 
 const env = {
   ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   DISABLE_EXTERNAL_CHECKS: "true",
+  RATE_LIMITER: createRateLimiterNamespace(),
 };
 const context = { waitUntil() {} };
 
@@ -32,6 +97,7 @@ test("renders the finished public product", async () => {
   assert.match(html, />HRV</);
   assert.match(html, />SRB</);
   assert.match(html, /class="theme-toggle"[^>]*data-i18n-skip/);
+  assert.match(html, /<html[^>]*lang="en"[^>]*data-theme="dark"/);
 });
 
 test("returns health and security headers", async () => {
@@ -162,6 +228,168 @@ test("Deep Scan works independently without a prior Quick Scan", async () => {
   assert.equal(payload.providers.some((provider) => provider.name === "VirusTotal"), true);
 });
 
+test("enforces a global per-client sliding-window scan limit", async () => {
+  const rateEnv = { ...env, RATE_LIMITER: createRateLimiterNamespace() };
+  const headers = { "content-type": "application/json", "cf-connecting-ip": "198.51.100.240" };
+  const body = JSON.stringify({ mode: "quick", message: "Please review this ordinary message." });
+
+  for (let index = 0; index < 20; index += 1) {
+    const response = await request("/api/scan", { method: "POST", headers, body }, rateEnv);
+    assert.equal(response.status, 200, `request ${index + 1}`);
+    assert.equal(response.headers.get("x-ratelimit-limit"), "20");
+    assert.equal(response.headers.get("x-ratelimit-remaining"), String(19 - index));
+    assert.ok(response.headers.get("x-ratelimit-reset"));
+  }
+
+  const blocked = await request("/api/scan", { method: "POST", headers, body }, rateEnv);
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.headers.get("x-ratelimit-limit"), "20");
+  assert.equal(blocked.headers.get("x-ratelimit-remaining"), "0");
+  assert.ok(blocked.headers.get("x-ratelimit-reset"));
+  assert.ok(Number(blocked.headers.get("retry-after")) >= 1);
+
+  const otherClient = await request("/api/scan", {
+    method: "POST",
+    headers: { ...headers, "cf-connecting-ip": "198.51.100.241" },
+    body,
+  }, rateEnv);
+  assert.equal(otherClient.status, 200);
+});
+
+test("Durable Object limiter makes an atomic sliding-window decision", () => {
+  const limiter = new RateLimiter(createDurableObjectContext(), {});
+  assert.deepEqual(
+    [limiter.check(2, 60).remaining, limiter.check(2, 60).remaining],
+    [1, 0],
+  );
+  const blocked = limiter.check(2, 60);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.remaining, 0);
+  assert.ok(blocked.retryAfter >= 1);
+  assert.throws(() => limiter.check(0, 60), RangeError);
+  assert.throws(() => limiter.check(2, 0), RangeError);
+});
+
+test("fails closed when global request protection is unavailable", async () => {
+  const unavailableEnv = {
+    ...env,
+    RATE_LIMITER: {
+      getByName() {
+        return { async check() { throw new Error("storage unavailable"); } };
+      },
+    },
+  };
+  const response = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.242" },
+    body: JSON.stringify({ mode: "quick", message: "Please review this message." }),
+  }, unavailableEnv);
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("retry-after"), "5");
+  assert.match((await response.json()).error, /protection/i);
+});
+
+test("detects brand look-alikes and reports domain intelligence", async () => {
+  const response = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.70" },
+    body: JSON.stringify({ mode: "quick", message: "Review https://paypa1-secure-login.com/account" }),
+  });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  const link = payload.links[0];
+  assert.equal(link.domainIntelligence.brand.suspectedBrand, "PayPal");
+  assert.equal(link.domainIntelligence.brand.officialDomain, "paypal.com");
+  assert.equal(link.domainIntelligence.brand.isTyposquat, true);
+  assert.equal(link.domainIntelligence.brand.state, "danger");
+  assert.ok(link.riskScore >= 72);
+  assert.equal(link.domainIntelligence.dns.state, "clear");
+  assert.equal(link.domainIntelligence.certificate.source, "Certificate Transparency");
+  assert.equal(link.domainIntelligence.certificate.activeRecordCount, 1);
+  assert.equal(link.domainIntelligence.redirects.checked, false);
+  assert.equal(link.domainIntelligence.redirects.bodyFetched, false);
+  assert.equal(link.providers.some((provider) => provider.name === "Brand similarity" && provider.state === "danger"), true);
+  assert.equal(link.providers.some((provider) => provider.name === "DNS footprint"), true);
+  assert.equal(link.providers.some((provider) => provider.name === "Certificate Transparency"), true);
+  assert.equal(link.providers.some((provider) => provider.name === "Redirect path" && provider.state === "not-run"), true);
+});
+
+test("does not flag an official monitored brand domain as typosquatting", async () => {
+  const response = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.71" },
+    body: JSON.stringify({ mode: "quick", message: "Open https://www.paypal.com/security" }),
+  });
+  assert.equal(response.status, 200);
+  const link = (await response.json()).links[0];
+  assert.equal(link.domainIntelligence.brand.suspectedBrand, "PayPal");
+  assert.equal(link.domainIntelligence.brand.isTyposquat, false);
+  assert.equal(link.domainIntelligence.brand.state, "clear");
+});
+
+test("resolves RDAP age from the registered parent of a subdomain", async () => {
+  const originalFetch = globalThis.fetch;
+  const rdapRequests = [];
+  globalThis.fetch = async (input) => {
+    const url = new URL(input instanceof URL ? input.href : typeof input === "string" ? input : input.url);
+
+    if (url.href === "https://data.iana.org/rdap/dns.json") {
+      return Response.json({
+        services: [[["com"], ["https://rdap.verisign.com/com/v1/"]]],
+      });
+    }
+    if (url.hostname === "rdap.verisign.com" || url.hostname === "rdap.org") {
+      rdapRequests.push(url.href);
+      if (url.pathname.endsWith("/docs.github.com")) return Response.json({ errorCode: 404 }, { status: 404 });
+      if (url.pathname.endsWith("/github.com")) {
+        return Response.json({
+          ldhName: "GITHUB.COM",
+          events: [{ eventAction: "registration", eventDate: "2007-10-09T18:20:50Z" }],
+        }, { headers: { "content-type": "application/rdap+json" } });
+      }
+      return Response.json({ errorCode: 404 }, { status: 404 });
+    }
+    if (url.hostname === "cloudflare-dns.com") {
+      return Response.json({ Status: 0, AD: true, Answer: [{ name: "docs.github.com", type: 1, TTL: 300, data: "140.82.121.3" }] });
+    }
+    if (url.hostname === "crt.sh") return Response.json([]);
+    throw new Error(`Unexpected external request: ${url.href}`);
+  };
+
+  try {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.73" },
+      body: JSON.stringify({ mode: "quick", message: "Review https://docs.github.com/en safely." }),
+    }, { ...env, DISABLE_EXTERNAL_CHECKS: "false" });
+    assert.equal(response.status, 200);
+    const link = (await response.json()).links[0];
+    const rdap = link.providers.find((provider) => provider.name === "RDAP domain age");
+    assert.equal(rdap.state, "clear");
+    assert.equal(rdap.label, "Established");
+    assert.ok(link.domainAgeDays > 6_000);
+    assert.equal(rdapRequests.some((url) => url.endsWith("/docs.github.com")), true);
+    assert.equal(rdapRequests.some((url) => url.endsWith("/github.com")), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Deep Scan inspects a bounded redirect path without fetching page content", async () => {
+  const response = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.72" },
+    body: JSON.stringify({ mode: "deep", message: "Check https://example.com/security" }),
+  });
+  assert.equal(response.status, 200);
+  const link = (await response.json()).links[0];
+  assert.equal(link.domainIntelligence.redirects.checked, true);
+  assert.equal(link.domainIntelligence.redirects.count, 0);
+  assert.equal(link.domainIntelligence.redirects.bodyFetched, false);
+  assert.equal(link.domainIntelligence.redirects.state, "clear");
+  assert.equal(link.providers.some((provider) => provider.name === "Redirect path" && provider.state === "clear"), true);
+});
+
 test("detects obfuscated phishing and multi-signal authority scams without inflating benign text", async () => {
   const cases = [
     {
@@ -195,6 +423,56 @@ test("detects obfuscated phishing and multi-signal authority scams without infla
   assert.equal((await benign.json()).riskLevel, "Low");
 });
 
+test("detects focused check, identity, gift-card, renewal, and verification-code scams", async () => {
+  const cases = [
+    {
+      type: /Check \/ mobile-deposit scam/,
+      level: "High",
+      message: "I will pay by check. I will send photos of the front and back, then make the mobile deposit through your banking app.",
+    },
+    {
+      type: /Identity \/ verification phishing/,
+      level: "High",
+      message: "Complete pre-employment verification within 24 hours. Submit a government-issued photo ID and proof of address to keep the application active.",
+    },
+    {
+      type: /Gift-card impersonation scam/,
+      level: "High",
+      message: "Keep this team surprise confidential. Buy store gift cards now and send the codes; I will reimburse you.",
+    },
+    {
+      type: /Renewal \/ subscription phishing/,
+      level: "Medium",
+      message: "Our records indicate your microchip enrollment expired and will show unregistered. Visit the link to renew the registration.",
+    },
+    {
+      type: /Verification-code theft/,
+      level: "High",
+      message: "Send me your unlock code fast. The verification code expires after 40 seconds and I need it from another phone.",
+    },
+  ];
+
+  for (const [index, sample] of cases.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${80 + index}` },
+      body: JSON.stringify({ mode: "quick", message: sample.message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, sample.level);
+    assert.match(payload.scamType, sample.type);
+  }
+
+  const ordinary = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.89" },
+    body: JSON.stringify({ mode: "quick", message: "I deposited the rent check in my mobile banking app. The payment cleared normally." }),
+  });
+  assert.equal(ordinary.status, 200);
+  assert.equal((await ordinary.json()).riskLevel, "Low");
+});
+
 test("keeps every information-shell label in the translation catalog", async () => {
   const translations = await readFile(new URL("../app/translations.ts", import.meta.url), "utf8");
   const labels = [
@@ -214,6 +492,39 @@ test("keeps every information-shell label in the translation catalog", async () 
     "Unknown campaigns, missing context, and provider gaps still require independent verification.",
     "Use these pages to understand what the result means before acting on it.",
     "Paste the complete message for the clearest explanation. No account is required.",
+  ];
+
+  for (const label of labels) {
+    assert.equal(translations.includes(`["${label}"`), true, label);
+  }
+});
+
+test("keeps technical result labels in the translation catalog", async () => {
+  const translations = await readFile(new URL("../app/translations.ts", import.meta.url), "utf8");
+  const labels = [
+    "Technical result sections",
+    "Evidence",
+    "URLs",
+    "Providers",
+    "IOCs",
+    "Local analysis",
+    "Live checks",
+    "Rules",
+    "Lines",
+    "Domain",
+    "hostname characters",
+    "Shortened URL",
+    "Direct URL",
+    "User-info present",
+    "No user-info",
+    "Domains",
+    "Email addresses",
+    "Phone numbers",
+    "Crypto wallets",
+    "None found",
+    "High-confidence signals",
+    "Supporting warnings",
+    "Clear or neutral signals",
   ];
 
   for (const label of labels) {
@@ -405,7 +716,8 @@ test("keeps private URLs local and blocks sensitive external submissions", async
   });
   assert.equal(localScan.status, 200);
   const localPayload = await localScan.json();
-  assert.equal(localPayload.links[0].providers.every((provider) => provider.label === "Protected"), true);
+  assert.equal(localPayload.links[0].providers.filter((provider) => provider.name !== "Brand similarity").every((provider) => provider.label === "Protected"), true);
+  assert.equal(localPayload.links[0].providers.some((provider) => provider.name === "Brand similarity"), true);
 
   const providerEnv = { ...env, VIRUSTOTAL_API_KEY: "test-provider-secret" };
   const privateSubmit = await request("/api/deep/submit", {

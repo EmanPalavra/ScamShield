@@ -3,6 +3,20 @@
   "name": "scam",
   "compatibility_date": "2026-07-23",
   "main": "./worker/index.ts",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimiter"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RateLimiter"]
+    }
+  ],
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",

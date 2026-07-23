@@ -26,8 +26,7 @@ const LanguageContext = createContext<LanguageContextValue>({
 function getLocaleSnapshot(): Locale {
   const saved = window.localStorage.getItem(STORAGE_KEY);
   if (isLocale(saved)) return saved;
-  const browserLocale = window.navigator.language.toLowerCase().split("-")[0];
-  return isLocale(browserLocale) ? browserLocale : "en";
+  return "en";
 }
 
 function subscribeToLocale(onStoreChange: () => void) {
