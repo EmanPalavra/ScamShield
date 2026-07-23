@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
+import { I18nProvider } from "./i18n";
 
 const CANONICAL_ORIGIN = "https://scam.shield-security.workers.dev";
 
@@ -43,13 +44,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
         <link rel="icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" sizes="any" />
         <link rel="shortcut icon" href="/scamshield-m2-favicon.png?v=6" type="image/png" />
       </head>
       <body className={`${inter.variable} ${orbitron.variable}`}>
-        {children}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

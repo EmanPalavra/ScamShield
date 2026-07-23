@@ -1,11 +1,9 @@
 import handler from "vinext/server/app-router-entry";
 import { handleScannerApi, type ScannerEnv } from "./scanner";
 
-interface Env extends ScannerEnv {
-  ASSETS: {
-    fetch(request: Request): Promise<Response>;
-  };
-}
+export { RateLimiter } from "./rate-limiter";
+
+type WorkerEnv = Env & ScannerEnv;
 
 interface RewriterElement {
   setAttribute(name: string, value: string): void;
@@ -65,7 +63,7 @@ interface ExecutionContext {
 }
 
 const worker = {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const requestId = crypto.randomUUID();
 

@@ -47,7 +47,7 @@ Unavailable providers are reported as unavailable. They are never treated as a c
 | Application framework | Vinext with Next-compatible App Router components |
 | Runtime | Cloudflare Workers |
 | Threat intelligence | Google Safe Browsing, RDAP, VirusTotal |
-| Abuse protection | Cloudflare Turnstile and request rate limits |
+| Abuse protection | Cloudflare Turnstile and globally consistent Durable Object rate limits |
 | Testing | Node test runner, TypeScript checks, production build tests |
 
 ## Run locally
@@ -92,7 +92,7 @@ pnpm run typecheck
 pnpm test
 ```
 
-The test suite covers public page rendering, security headers, scan behavior, provider fallbacks, request validation, private-URL protection, signed polling, and the transparency pages.
+The test suite covers public page rendering, security headers, scan behavior, global rate-limit behavior, provider fallbacks, request validation, private-URL protection, signed polling, and the transparency pages.
 
 ## Security and privacy
 
@@ -100,6 +100,7 @@ The test suite covers public page rendering, security headers, scan behavior, pr
 - Request bodies and URL counts are bounded before analysis.
 - Private, local, reserved, credential-bearing, and sensitive tokenized URLs are not sent to external providers.
 - Cross-site writes, unsupported methods, and unexpected content types are rejected.
+- Scan quotas use sharded, SQLite-backed Cloudflare Durable Objects, so limits remain consistent across Worker locations and deployments without storing raw IP addresses.
 - Fresh VirusTotal submissions require explicit consent and a valid Turnstile token when Turnstile is enabled.
 - Submitted message text is processed for the request and is not intentionally stored in an application database.
 

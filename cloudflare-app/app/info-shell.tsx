@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LocalizedInfoContent } from "./localized-info-content";
 import { SiteFooter, SiteHeader } from "./site-chrome";
 
 export type InfoPageKey = "how-it-works" | "methodology" | "privacy" | "limitations";
@@ -117,7 +118,7 @@ export function InfoShell({
               </nav>
               <div className="info-toc-note"><span aria-hidden="true">i</span><p>Use these pages to understand what the result means before acting on it.</p></div>
             </aside>
-            <div className="info-content">{children}</div>
+            <div className="info-content"><LocalizedInfoContent page={page} sectionIds={sections.map((section) => section.id)}>{children}</LocalizedInfoContent></div>
           </div>
 
           <div className="info-cta">
