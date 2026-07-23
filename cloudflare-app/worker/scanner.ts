@@ -86,7 +86,7 @@ const categoryRules: Rule[] = [
     type: "Account takeover / phishing",
     weight: 15,
     patterns: [
-      /(?:verify|confirm|validate|update|restore|unlock|secure).{0,50}(?:account|identity|login|password|payment information|details)/i,
+      /(?:verify|confirm|validate|update|restore|unlock|secure)[^.!?\n]{0,50}(?:account|identity|login|password|payment information|details)/i,
       /(?:account|cloud|storage|subscription).{0,90}(?:suspend|deactivat|locked|frozen|deleted|expire|full|on hold)/i,
       /(?:payment method|credit card|debit card).{0,50}(?:declined|failed|expired|update)/i,
       /(?:action required|update payment information|sign in here)/i,
@@ -376,6 +376,30 @@ const credentialPatterns = [
   /(?:lozinka|lozinku|podaci za prijavu|verifikacijski kod|sigurnosni kod)/i,
 ];
 
+const credentialRequestPatterns = [
+  /(?:send|share|tell|provide|enter|submit|type|confirm|verify|update).{0,45}(?:your\s+)?(?:password|passcode|verification code|one[- ]time code|otp|login details|bank details|card (?:number|details)|security code)/i,
+  /(?:password|passcode|verification code|one[- ]time code|otp|login details|bank details|security code).{0,45}(?:send|share|provide|reply|message|tell)/i,
+  /(?:upload|send|submit|provide).{0,45}(?:government-issued|government issued|photo id|passport|national id|proof of address)/i,
+  /(?:senden|teilen|eingeben|best[aä]tigen|verifizieren|aktualisieren).{0,45}(?:passwort|kennwort|anmeldedaten|sicherheitscode|tan[- ]?code)/i,
+  /(?:enviar|compartir|introducir|confirmar|verificar|actualizar).{0,45}(?:contraseña|credenciales|código de verificación|código de acceso)/i,
+  /(?:envoy(?:ez|er)|partag(?:ez|er)|saisir|confirm(?:ez|er)|v(?:é|e|Ã©)rifi(?:ez|er|e)|mettre (?:à|a|Ã ) jour).{0,45}(?:mot de passe|identifiants|code de v(?:é|e|Ã©)rification|code d['’]acc(?:è|e|Ã¨)s)/i,
+  /(?:stuur|deel|voer|bevestig|verifieer|werk bij).{0,45}(?:wachtwoord|inloggegevens|verificatiecode|toegangscode)/i,
+  /(?:pošalji|podijeli|podeli|unesi|potvrdi|provjeri|proveri|ažuriraj).{0,45}(?:lozink|zapork|podatke za prijavu|verifikacijski kod|sigurnosni kod|bezbednosni kod|jednokratni kod)/i,
+];
+
+const routineAccountNoticePatterns = [
+  /(?:an account|your account).{0,35}(?:has been|was|is now).{0,20}(?:created|set up|activated)/i,
+  /(?:you can|use the following details to).{0,30}(?:log in|sign in|access)/i,
+  /(?:set|create|choose).{0,25}(?:your )?password.{0,30}(?:for the first time|first login|before your first login)/i,
+  /(?:this (?:message|email) was|automatically).{0,25}(?:generated|sent)/i,
+  /(?:contact|reach).{0,40}(?:support|administrator|clinic|practice).{0,35}(?:questions|help|assistance)/i,
+  /(?:konto|account).{0,35}(?:wurde|is).{0,20}(?:erstellt|aangemaakt)/i,
+  /(?:cuenta|compte).{0,35}(?:ha sido|a été).{0,20}(?:creada|créé)/i,
+  /(?:passwort|wachtwoord|contraseña|mot de passe).{0,35}(?:erstmals|eerste keer|primera vez|première fois)/i,
+  /(?:nalog|račun).{0,35}(?:je|vam je).{0,20}(?:kreiran|otvoren|aktiviran)/i,
+  /(?:automatisch generiert|automatisch gegenereerd|generado automáticamente|généré automatiquement|automatski generisana|automatski generirana)/i,
+];
+
 const paymentPatterns = [
   /gift card/i,
   /wire transfer/i,
@@ -460,10 +484,7 @@ const callToActionPatterns = [
 
 const impersonationPatterns = [
   /(?:apple|paypal|zelle|microsoft|amazon|netflix|icloud|google|fedex|ups|dhl) (?:account|support|team|payment|security)/i,
-  /(?:hiring|recruiting|support|security|billing) (?:department|team)/i,
-  /sincerely.{0,30}(?:support|security|billing)/i,
   /copyright.{0,50}(?:apple|microsoft|google|amazon)/i,
-  /(?:sicherheits|kundenservice|soporte|seguridad|assistance|s[ée]curit[ée]|klantenservice|beveiliging).{0,25}(?:team|abteilung|equipo|service|afdeling)/i,
   /(?:banka|po[sš]ta|policija|porezna uprava).{0,60}(?:nalog|ra[cč]un|uplata|kazna|potvrda)/i,
 ];
 
@@ -487,8 +508,8 @@ const authorityPatterns = [
 ];
 
 const evasionPatterns = [
-  /\b(?:p[\s._-]*a[\s._-]*s[\s._-]*s[\s._-]*w[\s._-]*o[\s._-]*r[\s._-]*d|l[\s._-]*o[\s._-]*g[\s._-]*i[\s._-]*n)\b/i,
-  /\b(?:b[i1!]t[c(]oin|cr[y¥]pt[o0]|g[i1!]ft[\s._-]*card|pa[y¥]pa[l1])\b/i,
+  /\b(?:p[\s._-]+a[\s._-]+s[\s._-]+s[\s._-]+w[\s._-]+o[\s._-]+r[\s._-]+d|l[\s._-]+o[\s._-]+g[\s._-]+i[\s._-]+n)\b/i,
+  /\b(?:b[1!]tcoin|bit\(oin|cr¥pt[0o]|crypt0|g[1!]ft[\s._-]+card|pa¥pal|paypa1)\b/i,
   /[\u200B-\u200D\u2060\uFEFF]/,
 ];
 
@@ -935,7 +956,11 @@ function countPatternMatches(message: string, patterns: RegExp[]) {
 }
 
 function normalizeForDetection(message: string) {
-  const normalized = message
+  const withoutTranslationUi = message
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*(?:translated:\s*.{1,60}|english|translate can make mistakes(?:,\s*so verify translations)?|original text)\s*$/i.test(line))
+    .join("\n");
+  const normalized = withoutTranslationUi
     .normalize("NFKC")
     .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
     .replace(/\s+/g, " ")
@@ -979,7 +1004,8 @@ function messageAnalysis(message: string, urls: string[]) {
   categoryScores.sort((a, b) => b.score - a.score);
 
   const urgencyHits = countPatternMatches(normalizedMessage, urgencyPatterns);
-  const credentialHits = countPatternMatches(normalizedMessage, credentialPatterns);
+  const credentialMentionHits = countPatternMatches(normalizedMessage, credentialPatterns);
+  const credentialHits = countPatternMatches(normalizedMessage, credentialRequestPatterns);
   const paymentHits = countPatternMatches(normalizedMessage, paymentPatterns);
   const consequenceHits = countPatternMatches(normalizedMessage, consequencePatterns);
   const rewardHits = countPatternMatches(normalizedMessage, rewardPatterns);
@@ -989,6 +1015,7 @@ function messageAnalysis(message: string, urls: string[]) {
   const authorityHits = countPatternMatches(normalizedMessage, authorityPatterns);
   const evasionHits = countPatternMatches(message, evasionPatterns);
   const benignContextHits = countPatternMatches(normalizedMessage, benignContextPatterns);
+  const routineAccountNoticeHits = countPatternMatches(normalizedMessage, routineAccountNoticePatterns);
   const uppercaseWords = message.match(/\b[A-ZČĆŽŠĐ]{4,}\b/g)?.length ?? 0;
   const exclamations = Math.min(3, (message.match(/!/g) ?? []).length);
 
@@ -1038,18 +1065,33 @@ function messageAnalysis(message: string, urls: string[]) {
   if (strongestCategoryType === "Delivery / postal scam" && strongestCategoryHits >= 2 && paymentHits) {
     score = Math.max(score, 68);
   }
+  const routineAccountNotice = routineAccountNoticeHits >= 2
+    && urgencyHits === 0
+    && credentialHits === 0
+    && paymentHits === 0
+    && consequenceHits === 0
+    && rewardHits === 0
+    && secrecyHits === 0
+    && authorityHits === 0
+    && evasionHits === 0;
+  if (routineAccountNotice) {
+    score = Math.max(urls.length ? 8 : 4, score - Math.min(32, routineAccountNoticeHits * 8));
+  }
   if (benignContextHits && !callToActionHits && !paymentHits && !credentialHits && !urls.length) {
     score = Math.max(2, score - 22);
   }
 
   const reasons: string[] = [];
+  if (routineAccountNotice) {
+    reasons.push("The wording is consistent with a routine account-onboarding notice and does not ask the recipient to disclose credentials.");
+  }
   if (categoryScores[0]?.hits) reasons.push(`The wording matches a common ${categoryScores[0].type.toLowerCase()} pattern.`);
   if (urgencyHits) reasons.push("The message creates urgency or a short deadline to reduce careful checking.");
   if (credentialHits) reasons.push("It asks for login, verification, or other sensitive account information.");
   if (paymentHits) reasons.push("It mentions a payment method or transfer commonly abused in scams.");
   if (consequenceHits) reasons.push("It threatens account restrictions, data loss, or another consequence to pressure the recipient.");
   if (rewardHits) reasons.push("It uses a reward, payout, guaranteed return, or unusually attractive offer as a lure.");
-  if (callToActionHits) reasons.push("It pushes the recipient toward an immediate reply, call, payment, registration, or linked page.");
+  if (callToActionHits && !routineAccountNotice) reasons.push("It pushes the recipient toward an immediate reply, call, payment, registration, or linked page.");
   if (impersonationHits) reasons.push("The wording imitates a recognizable company or official support team.");
   if (secrecyHits) reasons.push("It tries to isolate the recipient or move the conversation away from trusted verification channels.");
   if (authorityHits) reasons.push("It invokes authority or workplace hierarchy to make an unusual request feel mandatory.");
@@ -1073,7 +1115,9 @@ function messageAnalysis(message: string, urls: string[]) {
       state: credentialHits > 0 ? "danger" : "clear",
       detail: credentialHits
         ? `${credentialHits} request${credentialHits === 1 ? "" : "s"} related to login, identity, or verification data were detected.`
-        : "No request for passwords, login details, or verification codes was detected.",
+        : credentialMentionHits
+          ? `Credential-related terms were mentioned ${credentialMentionHits} time${credentialMentionHits === 1 ? "" : "s"}, but no request to disclose them was detected.`
+          : "No request for passwords, login details, or verification codes was detected.",
     },
     {
       name: "Payment language",
@@ -1110,9 +1154,11 @@ function messageAnalysis(message: string, urls: string[]) {
     {
       name: "Forced call to action",
       count: callToActionHits,
-      state: callToActionHits >= 2 ? "danger" : callToActionHits === 1 ? "warning" : "clear",
-      detail: callToActionHits
-        ? `${callToActionHits} instruction to call, reply, register, pay, or open a link was detected.`
+      state: routineAccountNotice ? "clear" : callToActionHits >= 2 ? "danger" : callToActionHits === 1 ? "warning" : "clear",
+      detail: routineAccountNotice && callToActionHits
+        ? "A first-time account-access instruction was found without urgency, payment pressure, or a request to disclose credentials."
+        : callToActionHits
+          ? `${callToActionHits} instruction to call, reply, register, pay, or open a link was detected.`
         : "No suspicious instruction to reply, call, register, pay, or open a link was detected.",
     },
     {
@@ -1170,11 +1216,12 @@ function messageAnalysis(message: string, urls: string[]) {
   const lines = message ? message.split(/\r?\n/).length : 0;
   return {
     score: Math.min(96, score),
-    scamType: strongestCategory ?? inferredType,
+    scamType: routineAccountNotice ? "Routine account onboarding / access notice" : strongestCategory ?? inferredType,
     reasons,
     indicators: { urgency: urgencyHits, credentials: credentialHits, payment: paymentHits },
     signals,
     categories: categoryScores.filter((category) => category.hits > 0).slice(0, 4),
+    context: { routineAccountNotice, routineAccountNoticeHits, credentialMentionHits },
     stats: {
       characters: message.length,
       words,
@@ -1704,6 +1751,7 @@ async function runScan(message: string, mode: "quick" | "deep", env: ScannerEnv,
         categoryRules.reduce((sum, rule) => sum + rule.patterns.length, 0) +
         urgencyPatterns.length +
         credentialPatterns.length +
+        credentialRequestPatterns.length +
         paymentPatterns.length +
         consequencePatterns.length +
         rewardPatterns.length +
@@ -1712,11 +1760,13 @@ async function runScan(message: string, mode: "quick" | "deep", env: ScannerEnv,
         secrecyPatterns.length +
         authorityPatterns.length +
         evasionPatterns.length +
-        benignContextPatterns.length,
+        benignContextPatterns.length +
+        routineAccountNoticePatterns.length,
       messageStats: local.stats,
       detectedLanguage: local.detectedLanguage,
       signals: local.signals,
       categoryMatches: local.categories,
+      context: local.context,
       providerCoverage,
       timing: {
         localAnalysisMs,

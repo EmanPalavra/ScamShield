@@ -423,6 +423,54 @@ test("detects obfuscated phishing and multi-signal authority scams without infla
   assert.equal((await benign.json()).riskLevel, "Low");
 });
 
+test("distinguishes routine account onboarding from credential phishing", async () => {
+  const legitimateMessage = `Translated: Dutch
+English
+Translate can make mistakes, so verify translations
+Dear Person,
+An account has been created for you to use SpotonMedics for FysioQualis.
+
+You can log in via login.spotonmedics.nl with the following login details:
+
+Username    Person
+Password    Click here to set the password for the first time
+Yours sincerely,
+HCI SpotOnMedics support team
+
+This message was automatically generated. Please contact FysioQualis if you have any questions.`;
+
+  const legitimate = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.190" },
+    body: JSON.stringify({ mode: "quick", message: legitimateMessage }),
+  });
+  assert.equal(legitimate.status, 200);
+  const legitimateResult = await legitimate.json();
+  assert.equal(legitimateResult.riskLevel, "Low");
+  assert.ok(legitimateResult.riskPercent < 34);
+  assert.equal(legitimateResult.scamType, "Routine account onboarding / access notice");
+  assert.match(legitimateResult.reasons[0], /routine account-onboarding/i);
+  assert.equal(legitimateResult.analysis.context.routineAccountNotice, true);
+  assert.equal(legitimateResult.analysis.signals.find((signal) => signal.name === "Sensitive information").count, 0);
+  assert.equal(legitimateResult.analysis.signals.find((signal) => signal.name === "Forced call to action").state, "clear");
+  assert.equal(legitimateResult.links[0].domain, "login.spotonmedics.nl");
+
+  const phishing = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.191" },
+    body: JSON.stringify({
+      mode: "quick",
+      message: "URGENT: Your account will be suspended today. Verify your password and send the verification code immediately at https://secure-account-check.xyz/login.",
+    }),
+  });
+  assert.equal(phishing.status, 200);
+  const phishingResult = await phishing.json();
+  assert.equal(phishingResult.riskLevel, "High");
+  assert.ok(phishingResult.riskPercent >= 76);
+  assert.equal(phishingResult.analysis.context.routineAccountNotice, false);
+  assert.ok(phishingResult.analysis.signals.find((signal) => signal.name === "Sensitive information").count >= 1);
+});
+
 test("detects focused check, identity, gift-card, renewal, and verification-code scams", async () => {
   const cases = [
     {
