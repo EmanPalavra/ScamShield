@@ -3,6 +3,8 @@
 import type { CSSProperties, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScamShieldLogoMark, SiteFooter, SiteHeader } from "./site-chrome";
+import { useLanguage } from "./i18n";
+import { exampleMessages } from "./translations";
 
 type RiskLevel = "Low" | "Medium" | "High";
 type ProviderState = "clear" | "warning" | "danger" | "unavailable" | "not-run";
@@ -92,6 +94,7 @@ interface ScanResult {
       liveChecksMs: number;
       totalMs: number;
     };
+    detectedLanguage: string;
   };
   deepScan: {
     checkedExistingReport: boolean;
@@ -145,9 +148,6 @@ declare global {
   }
 }
 
-const EXAMPLE_MESSAGE =
-  "URGENT: Your bank account will be locked within 30 minutes. Verify your login now at https://secure-account-check.xyz/login and enter your one-time code.";
-
 const analystTabs: AnalystTab[] = ["Evidence", "URLs", "Providers", "IOCs"];
 function riskIcon(level: RiskLevel) {
   if (level === "High") return "×";
@@ -193,6 +193,7 @@ function wait(milliseconds: number, signal: AbortSignal) {
 }
 
 export function ScanApp() {
+  const { locale, t } = useLanguage();
   const [message, setMessage] = useState("");
   const [view, setView] = useState<"simple" | "analyst">("simple");
   const [activeTab, setActiveTab] = useState<AnalystTab>("Evidence");
@@ -573,7 +574,7 @@ export function ScanApp() {
               />
               <div className="field-footer">
                 <span><b aria-hidden="true">!</b> Remove passwords, one-time codes, and private internal links.</span>
-                <button type="button" className="text-button" onClick={() => { setMessage(EXAMPLE_MESSAGE); setError(""); }}>Load safe example</button>
+                <button type="button" className="text-button" onClick={() => { setMessage(exampleMessages[locale]); setError(""); }}>Load safe example</button>
               </div>
             </div>
 
@@ -638,7 +639,7 @@ export function ScanApp() {
             <div className="results-topline">
               <div>
                 <p className="section-kicker">{result.scanMode === "deep" ? "Deep intelligence report" : "Rapid risk report"}</p>
-                <h2 id="result-title">{resultHeadline}</h2>
+                <h2 id="result-title">{t(resultHeadline)}</h2>
               </div>
               <div className="result-actions">
                 <div className="view-switch" aria-label="Result detail level">
@@ -654,31 +655,31 @@ export function ScanApp() {
                 <div
                   className="risk-visual"
                   style={{ "--risk-progress": `${result.riskPercent * 3.6}deg` } as CSSProperties}
-                  aria-label={`${result.riskLevel} risk, ${result.riskPercent} percent`}
+                  aria-label={`${t(result.riskLevel)} ${t("risk")}, ${result.riskPercent} percent`}
                 >
                   <div><span className="risk-symbol" aria-hidden="true">{riskIcon(result.riskLevel)}</span><span className="risk-score-value"><strong>{result.riskPercent}</strong><small>/100</small></span></div>
                 </div>
-                <span>{result.riskLevel} risk</span>
+                <span>{t(result.riskLevel)} {t("risk")}</span>
               </div>
               <div className="risk-copy">
-                <span className="risk-pill">{result.riskLabel}</span>
-                <h3>{result.scamType}</h3>
+                <span className="risk-pill">{t(result.riskLabel)}</span>
+                <h3>{t(result.scamType)}</h3>
                 <p>
-                  {result.riskLevel === "High"
+                  {t(result.riskLevel === "High"
                     ? "Multiple strong warning signals were found. Treat the content as unsafe until you verify it through an official channel."
                     : result.riskLevel === "Medium"
                       ? "The message contains signals that deserve independent verification before you reply, click, pay, or share information."
-                      : "No strong threat was confirmed, but reputation sources cannot guarantee that a new or targeted scam is safe."}
+                      : "No strong threat was confirmed, but reputation sources cannot guarantee that a new or targeted scam is safe.")}
                 </p>
-                <div className="verdict-command"><span>Recommended now</span><strong>{result.actions[0]}</strong></div>
+                <div className="verdict-command"><span>Recommended now</span><strong>{t(result.actions[0])}</strong></div>
               </div>
             </div>
 
             <div className="result-metrics" aria-label="Scan coverage summary">
-              <article><span>Input analyzed</span><strong>{result.analysis.inputType}</strong><small>{result.analysis.messageStats.words} words · {result.analysis.messageStats.characters} characters</small></article>
-              <article><span>Signals found</span><strong>{detectedSignals} / {result.analysis.signals.length}</strong><small>{result.analysis.rulesEvaluated} detection rules evaluated</small></article>
-              <article><span>Live coverage</span><strong>{result.analysis.providerCoverage.completed} / {result.analysis.providerCoverage.total}</strong><small>{result.analysis.providerCoverage.threats} threat · {result.analysis.providerCoverage.warnings} warning</small></article>
-              <article><span>Completed in</span><strong>{formatDuration(result.analysis.timing.totalMs)}</strong><small>{result.links.length} URL{result.links.length === 1 ? "" : "s"} inspected</small></article>
+              <article><span>Input analyzed</span><strong>{t(result.analysis.inputType)}</strong><small>{t(result.analysis.detectedLanguage)} · {result.analysis.messageStats.words} {t("words")} · {result.analysis.messageStats.characters} {t("characters")}</small></article>
+              <article><span>Signals found</span><strong>{detectedSignals} / {result.analysis.signals.length}</strong><small>{t(`${result.analysis.rulesEvaluated} detection rules evaluated`)}</small></article>
+              <article><span>Live coverage</span><strong>{result.analysis.providerCoverage.completed} / {result.analysis.providerCoverage.total}</strong><small>{t(`${result.analysis.providerCoverage.threats} threat · ${result.analysis.providerCoverage.warnings} warning`)}</small></article>
+              <article><span>Completed in</span><strong>{formatDuration(result.analysis.timing.totalMs)}</strong><small>{t(`${result.links.length} URL${result.links.length === 1 ? "" : "s"} inspected`)}</small></article>
             </div>
 
             {result.limits.truncatedUrls && <div className="coverage-warning" role="note">Only the first {result.limits.maxUrls} URLs were inspected. Remove extra links and scan again if you need the others checked.</div>}
@@ -689,39 +690,39 @@ export function ScanApp() {
                   <article className="result-list-card findings-card">
                     <div className="card-title"><span aria-hidden="true">!</span><div><p>Why it was flagged</p><h3>Key findings</h3></div></div>
                     <ol className="finding-list">
-                      {result.reasons.map((reason, index) => <li key={`${reason}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p>{reason}</p></li>)}
+                      {result.reasons.map((reason, index) => <li key={`${reason}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><p>{t(reason)}</p></li>)}
                     </ol>
                   </article>
                   <article className="result-list-card action-card">
                     <div className="card-title"><span aria-hidden="true">→</span><div><p>Recommended response</p><h3>What to do next</h3></div></div>
                     <ol className="action-list">
-                      {result.actions.map((action, index) => <li key={action}><span>{index + 1}</span><p>{action}</p></li>)}
+                      {result.actions.map((action, index) => <li key={action}><span>{index + 1}</span><p>{t(action)}</p></li>)}
                     </ol>
                   </article>
                 </div>
 
                 <div className="inspection-grid">
                   <article className="inspection-card">
-                    <div className="inspection-head"><div><p>Message analysis</p><h3>Signals inspected</h3></div><span>{detectedSignals} detected</span></div>
+                    <div className="inspection-head"><div><p>Message analysis</p><h3>Signals inspected</h3></div><span>{t(`${detectedSignals} detected`)}</span></div>
                     <div className="signal-list">
                       {result.analysis.signals.map((signal) => (
                         <div key={signal.name} className={`signal-row signal-${signal.state}`}>
                           <span className="signal-state" aria-hidden="true">{signal.state === "clear" ? "✓" : "!"}</span>
-                          <div><strong>{signal.name}</strong><p>{signal.detail}</p></div>
-                          <b>{signal.count || "Clear"}</b>
+                          <div><strong>{t(signal.name)}</strong><p>{t(signal.detail)}</p></div>
+                          <b>{signal.count || t("Clear")}</b>
                         </div>
                       ))}
                     </div>
                   </article>
 
                   <article className="inspection-card">
-                    <div className="inspection-head"><div><p>Threat intelligence</p><h3>Provider checks</h3></div><span>{result.analysis.providerCoverage.completed} completed</span></div>
+                    <div className="inspection-head"><div><p>Threat intelligence</p><h3>Provider checks</h3></div><span>{t(`${result.analysis.providerCoverage.completed} completed`)}</span></div>
                     <div className="compact-providers">
                       {result.providers.map((provider, index) => (
                         <div key={`${provider.name}-${provider.subject}-${index}`} className={`compact-provider provider-${provider.state}`}>
                           <span className="provider-icon" aria-hidden="true">{providerIcon(provider.state)}</span>
-                          <div><strong>{provider.name}</strong><small>{provider.subject}</small><p>{provider.detail}</p></div>
-                          <b>{provider.label}</b>
+                          <div><strong>{provider.name}</strong><small>{provider.subject}</small><p>{t(provider.detail)}</p></div>
+                          <b>{t(provider.label)}</b>
                         </div>
                       ))}
                     </div>
@@ -729,7 +730,7 @@ export function ScanApp() {
                 </div>
 
                 <section className="url-overview" aria-labelledby="url-overview-title">
-                  <div className="section-heading-row"><div><p className="section-kicker">Link intelligence</p><h3 id="url-overview-title">URLs inspected</h3></div><span>{result.links.length} total</span></div>
+                  <div className="section-heading-row"><div><p className="section-kicker">Link intelligence</p><h3 id="url-overview-title">URLs inspected</h3></div><span>{t(`${result.links.length} total`)}</span></div>
                   {result.links.length ? result.links.map((link) => (
                     <article key={link.url} className={`url-report ${link.riskScore >= 67 ? "url-danger" : link.riskScore >= 34 ? "url-warning" : "url-clear"}`}>
                       <div className="url-report-main">
@@ -743,7 +744,7 @@ export function ScanApp() {
                         <span><b>{link.technical.queryParameters}</b> query parameters</span>
                         <span><b>{link.technical.isPunycode ? "Yes" : "No"}</b> Punycode</span>
                       </div>
-                      <ul>{link.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                      <ul>{link.reasons.map((reason) => <li key={reason}>{t(reason)}</li>)}</ul>
                       {link.virusTotal?.found && link.virusTotal.stats && (
                         <div className="vt-inline"><span>VirusTotal existing report</span><b>{link.virusTotal.stats.malicious ?? 0} malicious</b><b>{link.virusTotal.stats.suspicious ?? 0} suspicious</b><b>{link.virusTotal.stats.harmless ?? 0} harmless</b></div>
                       )}
@@ -763,7 +764,7 @@ export function ScanApp() {
                   <div className="tab-content evidence-table" role="tabpanel">
                     <div className="technical-summary"><span>Local analysis <b>{formatDuration(result.analysis.timing.localAnalysisMs)}</b></span><span>Live checks <b>{formatDuration(result.analysis.timing.liveChecksMs)}</b></span><span>Rules <b>{result.analysis.rulesEvaluated}</b></span><span>Lines <b>{result.analysis.messageStats.lines}</b></span></div>
                     {result.evidence.map((item, index) => (
-                      <article key={`${item.source}-${index}`}><span className={`impact impact-${item.impact.toLowerCase()}`}>{item.impact}</span><div><strong>{item.source}</strong><p>{item.detail}</p></div></article>
+                      <article key={`${item.source}-${index}`}><span className={`impact impact-${item.impact.toLowerCase()}`}>{t(item.impact)}</span><div><strong>{t(item.source)}</strong><p>{t(item.detail)}</p></div></article>
                     ))}
                   </div>
                 )}
@@ -775,7 +776,7 @@ export function ScanApp() {
                         <div className="url-card-head"><div><span>Domain</span><strong>{link.domain}</strong></div><b>{link.riskScore}% link risk</b></div>
                         <code>{link.url}</code>
                         <div className="technical-chips"><span>{link.technical.protocol}</span><span>.{link.technical.tld}</span><span>{link.technical.hostnameLength} hostname chars</span><span>{link.technical.isShortener ? "Shortened URL" : "Direct URL"}</span><span>{link.technical.hasUserInfo ? "User-info present" : "No user-info"}</span></div>
-                        <ul>{link.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                        <ul>{link.reasons.map((reason) => <li key={reason}>{t(reason)}</li>)}</ul>
                       </article>
                     )) : <p className="empty-state">No URL was found in this message.</p>}
                   </div>
@@ -786,8 +787,8 @@ export function ScanApp() {
                     {result.providers.map((provider, index) => (
                       <article key={`${provider.name}-${provider.subject}-${index}`} className={`provider-card provider-${provider.state}`}>
                         <span className="provider-icon" aria-hidden="true">{providerIcon(provider.state)}</span>
-                        <div><span>{provider.subject}</span><h3>{provider.name}</h3><p>{provider.detail}</p></div>
-                        <b>{provider.label}</b>
+                        <div><span>{provider.subject}</span><h3>{provider.name}</h3><p>{t(provider.detail)}</p></div>
+                        <b>{t(provider.label)}</b>
                       </article>
                     ))}
                   </div>

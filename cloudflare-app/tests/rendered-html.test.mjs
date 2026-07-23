@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -24,6 +25,13 @@ test("renders the finished public product", async () => {
   assert.match(html, /Quick Scan/);
   assert.match(html, /Deep Scan/);
   assert.match(html, /scamshield-m2-favicon\.png/);
+  assert.match(html, /English/);
+  assert.match(html, /German/);
+  assert.match(html, /Dutch/);
+  assert.match(html, />BIH</);
+  assert.match(html, />HRV</);
+  assert.match(html, />SRB</);
+  assert.match(html, /class="theme-toggle"[^>]*data-i18n-skip/);
 });
 
 test("returns health and security headers", async () => {
@@ -185,6 +193,155 @@ test("detects obfuscated phishing and multi-signal authority scams without infla
   });
   assert.equal(benign.status, 200);
   assert.equal((await benign.json()).riskLevel, "Low");
+});
+
+test("keeps every information-shell label in the translation catalog", async () => {
+  const translations = await readFile(new URL("../app/translations.ts", import.meta.url), "utf8");
+  const labels = [
+    "ScamShield guides",
+    "Guide qualities",
+    "Decision pipeline",
+    "Evidence model",
+    "Data boundary",
+    "Safety boundary",
+    "4 stages",
+    "3 risk bands",
+    "Consent gated",
+    "Human check",
+    "Language, URL structure, live reputation, and an explainable recommendation.",
+    "The score is built from observable evidence—not an unexplained AI confidence number.",
+    "Message analysis stays inside the scan flow; URL reputation checks have visible provider boundaries.",
+    "Unknown campaigns, missing context, and provider gaps still require independent verification.",
+    "Use these pages to understand what the result means before acting on it.",
+    "Paste the complete message for the clearest explanation. No account is required.",
+  ];
+
+  for (const label of labels) {
+    assert.equal(translations.includes(`["${label}"`), true, label);
+  }
+});
+
+test("detects high-risk phishing across all supported message-language groups", async () => {
+  const samples = [
+    {
+      language: "German",
+      message: "DRINGEND: Ihr Konto wird sofort gesperrt. Bestätigen Sie Ihr Passwort unter https://konto-pruefung.top/login und geben Sie den Sicherheitscode ein.",
+    },
+    {
+      language: "Spanish",
+      message: "URGENTE: Su cuenta será bloqueada inmediatamente. Verifique su contraseña en https://verificar-cuenta.top/login y envíe el código de verificación.",
+    },
+    {
+      language: "French",
+      message: "URGENT : votre compte sera bloqué immédiatement. Vérifiez votre mot de passe sur https://verification-compte.top/login et envoyez le code de vérification.",
+    },
+    {
+      language: "Dutch",
+      message: "DRINGEND: Uw rekening wordt onmiddellijk geblokkeerd. Verifieer uw wachtwoord via https://rekening-controle.top/login en stuur de verificatiecode.",
+    },
+    {
+      language: "Bosnian",
+      message: "HITNO: Vaš bankovni račun će biti blokiran odmah. Potvrdite lozinku na https://provjera-racuna.top/login i pošaljite sigurnosni kod.",
+    },
+    {
+      language: "Croatian",
+      message: "HITNO: Vaš bankovni račun bit će blokiran odmah. Potvrdite zaporku na https://provjera-racuna.top/login i pošaljite sigurnosni kod.",
+    },
+    {
+      language: "Serbian",
+      message: "HITNO: Vaš bankovni nalog biće blokiran odmah. Proverite lozinku na https://provera-naloga.top/login i pošaljite bezbednosni kod.",
+    },
+  ];
+
+  for (const [index, sample] of samples.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${index + 60}` },
+      body: JSON.stringify({ mode: "quick", message: sample.message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "High", sample.language);
+    assert.equal(payload.analysis.detectedLanguage, sample.language);
+    assert.notEqual(payload.scamType, "No specific scam category identified");
+  }
+});
+
+test("detects localized scam categories beyond credential phishing", async () => {
+  const samples = [
+    {
+      language: "German",
+      category: /Brand impersonation \/ fake charge/,
+      message: "DRINGEND: Eine unbekannte, nicht autorisierte Abbuchung wurde erkannt. Klicken Sie auf den Link https://rechnung-pruefen.top und widersprechen Sie der Transaktion sofort.",
+    },
+    {
+      language: "Spanish",
+      category: /Delivery \/ postal/,
+      message: "URGENTE: La entrega ha fallado y debe pagar una tarifa de aduana. Haga clic en el enlace https://entrega-segura.top para completar el pago ahora.",
+    },
+    {
+      language: "French",
+      category: /Prize \/ advance-fee/,
+      message: "URGENT : vous avez gagné un prix. Payez les frais de dossier et cliquez sur le lien https://prix-reclame.top pour réclamer votre récompense.",
+    },
+    {
+      language: "Dutch",
+      category: /Job scam/,
+      message: "DRINGEND: Voor deze vacature moet u vooraf betalen. Het sollicitatiegesprek is via WhatsApp; stuur de betaling vandaag om te beginnen.",
+    },
+    {
+      language: "Bosnian",
+      category: /Investment \/ crypto/,
+      message: "HITNO: Provjerite ponudu. Vaša isplata je blokirana dok ne uplatite naknadu. Ovo ulaganje ima zagarantovanu zaradu; pošaljite novac odmah.",
+    },
+    {
+      language: "Croatian",
+      category: /Document \/ SMS phishing/,
+      message: "HITNO: Dokument je na čekanju. Otvorite dokument putem poveznice https://dokument-pregled.top i potvrdite zaporku.",
+    },
+    {
+      language: "Serbian",
+      category: /Brand impersonation \/ fake charge|Account takeover/,
+      message: "HITNO: Na nalogu je neovlašćena transakcija. Proverite bezbednosni kod na https://provera-naloga.top i odmah osporite plaćanje.",
+    },
+  ];
+
+  for (const [index, sample] of samples.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `203.0.113.${index + 80}` },
+      body: JSON.stringify({ mode: "quick", message: sample.message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.match(payload.riskLevel, /^(Medium|High)$/, sample.language);
+    assert.equal(payload.analysis.detectedLanguage, sample.language);
+    assert.match(payload.scamType, sample.category);
+  }
+});
+
+test("keeps ordinary multilingual messages low risk while identifying their language", async () => {
+  const samples = [
+    ["German", "Bitte bringen Sie die Unterlagen morgen zum vereinbarten Termin mit."],
+    ["Spanish", "Por favor, recuerde que la reunión comienza mañana a las diez."],
+    ["French", "Veuillez apporter les documents à la réunion prévue demain matin."],
+    ["Dutch", "Alstublieft, neem de documenten morgen mee naar de afgesproken vergadering."],
+    ["Bosnian", "Molim vas, sljedeći sastanak je sutra u deset sati."],
+    ["Croatian", "Molim vas, poveznica za sutrašnji sastanak nalazi se u kalendaru."],
+    ["Serbian", "Molim vas, sledeći sastanak je sutra u deset sati."],
+  ];
+
+  for (const [index, [language, message]] of samples.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `192.0.2.${index + 90}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "Low", language);
+    assert.equal(payload.analysis.detectedLanguage, language);
+  }
 });
 
 test("fresh VirusTotal analysis rejects missing consent", async () => {

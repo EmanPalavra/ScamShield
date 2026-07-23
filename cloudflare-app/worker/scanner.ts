@@ -75,6 +75,7 @@ const categoryRules: Rule[] = [
       /dispute.{0,30}(?:call|contact).{0,20}\d{7,}/i,
       /if you did not.{0,80}(?:call|click|change|contact)/i,
       /(?:nalog|racun).{0,80}(?:naplacen|placen|transakcij|neovlasten)/i,
+      /(?:konto|cuenta|compte|rekening).{0,80}(?:zahlung|pago|paiement|betaling|transacci[oó]n|transaction)/i,
     ],
   },
   {
@@ -89,6 +90,8 @@ const categoryRules: Rule[] = [
       /password.{0,30}(?:expire|reset|change|confirm)/i,
       /(?:nalog|racun).{0,60}(?:blokiran|zakljucan|zamrznut|deaktiviran)/i,
       /potvrd(?:i|ite).{0,30}(?:nalog|identitet|lozink|uplatu)/i,
+      /(?:best[aä]tigen|verifizieren|actualizar|verificar|confirmer|v[ée]rifier|bevestigen|verifi[eë]ren).{0,55}(?:konto|cuenta|compte|rekening|passwort|contrase[nñ]a|mot de passe|wachtwoord)/i,
+      /(?:konto|cuenta|compte|rekening).{0,70}(?:gesperrt|bloquead|suspendu|bloqu[ée]|geblokkeerd|opgeschort)/i,
     ],
   },
   {
@@ -97,6 +100,7 @@ const categoryRules: Rule[] = [
     patterns: [
       /(?:parcel|package|delivery|shipment|fedex|ups|dhl|usps).{0,120}(?:fee|address|failed|held|customs|reschedule|total due|payment|creditcard)/i,
       /(?:paket|posiljka|dostava).{0,100}(?:naknad|adres|zadrzan|carin|neuspjel|uplati)/i,
+      /(?:paket|sendung|paquete|env[ií]o|colis|livraison|pakket|bezorging).{0,100}(?:geb[uü]hr|adresse|direcci[oó]n|frais|adres|kosten|zahlung|pago|paiement|betaling)/i,
       /(?:shipping|handling|insurance).{0,80}(?:fee|\$\s?\d+|total due)/i,
       /customs.{0,25}(?:fee|charge|payment)/i,
     ],
@@ -112,6 +116,7 @@ const categoryRules: Rule[] = [
       /(?:signal prediction|buy \d+%|trading signal)/i,
       /wallet.{0,35}(?:validation|synchronization|unlock|connect)/i,
       /sigurn(?:a|i).{0,25}(?:zarada|profit|povrat)/i,
+      /(?:krypto|bitcoin|crypto|criptomoneda).{0,100}(?:garantiert|garantizado|garanti|gegarandeerd|gewinn|beneficio|rendement|winst)/i,
     ],
   },
   {
@@ -123,6 +128,7 @@ const categoryRules: Rule[] = [
       /(?:mrbeast|celebrity|influencer).{0,100}(?:giveaway|bonus|crypto|casino)/i,
       /(?:processing|release|administration).{0,20}fee/i,
       /(?:inheritance|grant).{0,80}(?:fee|transfer|release)/i,
+      /(?:gewonnen|gewinner|premio|ganador|gagn[ée]|prix|winnaar|prijs).{0,100}(?:beanspruchen|reclamar|r[ée]clamer|claimen|geb[uü]hr|tarifa|frais|kosten)/i,
     ],
   },
   {
@@ -134,6 +140,7 @@ const categoryRules: Rule[] = [
       /(?:onboarding|recruiting).{0,120}(?:creators?|candidate|platform|remote|bonus|joining)/i,
       /(?:posao od kuce|udaljeni posao).{0,100}(?:zarad|dnevno|sedmicno|obuk|intervju)/i,
       /pay.{0,80}(?:training|equipment).{0,100}(?:job|position)/i,
+      /(?:heimarbeit|trabajo desde casa|travail [àa] domicile|thuiswerk).{0,100}(?:verdienen|ganar|gagner|salaris|betaling)/i,
     ],
   },
   {
@@ -143,6 +150,7 @@ const categoryRules: Rule[] = [
       /(?:computer|device).*(?:infected|virus|compromised)/i,
       /(?:računar|uređaj).*(?:zaražen|virus|hakovan)/i,
       /call (?:microsoft|support).*(?:immediately|now)/i,
+      /(?:computer|ordinateur|ordenador|computer).{0,80}(?:virus|infiziert|infect[ée]|infectado|besmet|gehackt)/i,
     ],
   },
   {
@@ -154,6 +162,7 @@ const categoryRules: Rule[] = [
       /(?:pay half|deposit).{0,80}(?:take.{0,30}(?:post|listing).{0,20}down|mark.{0,15}sold)/i,
       /(?:apple|google|steam|amazon).{0,20}gift card/i,
       /(?:pre-owned|used item).{0,100}(?:visit|online store|pay|shipping)/i,
+      /(?:geschenkkarte|tarjeta de regalo|carte cadeau|cadeaukaart).{0,60}(?:kaufen|comprar|acheter|kopen|code)/i,
     ],
   },
   {
@@ -175,6 +184,89 @@ const categoryRules: Rule[] = [
       /pretend(?:ing)? to be/i,
     ],
   },
+  {
+    type: "Brand impersonation / fake charge",
+    weight: 16,
+    patterns: [
+      /(?:abbuchung|rechnung|transaktion).{0,80}(?:nicht autorisiert|unbekannt|stornieren|widersprechen)/i,
+      /(?:cargo|factura|transacci[oó]n).{0,80}(?:no autorizad|desconocid|cancelar|reclamar)/i,
+      /(?:d[eé]bit|facture|transaction).{0,80}(?:non autoris[eé]|inconnu|annuler|contester)/i,
+      /(?:afschrijving|factuur|transactie).{0,80}(?:niet geautoriseerd|onbekend|annuleren|betwisten)/i,
+      /(?:tere[cć]enje|ra[cč]un|transakcij).{0,80}(?:neovla[sš]ten|nepoznat|otka[zž]|ospor)/i,
+    ],
+  },
+  {
+    type: "Account takeover / phishing",
+    weight: 15,
+    patterns: [
+      /(?:anmeldedaten|credenciales|identifiants|inloggegevens|podaci za prijavu).{0,55}(?:best[aä]tigen|verificar|confirmer|bevestigen|potvrditi|proveriti)/i,
+      /(?:sicherheitswarnung|alerta de seguridad|alerte de s[eé]curit[eé]|beveiligingswaarschuwing|sigurnosno upozorenje|bezbednosno upozorenje).{0,80}(?:konto|cuenta|compte|rekening|ra[cč]un|nalog)/i,
+    ],
+  },
+  {
+    type: "Delivery / postal scam",
+    weight: 13,
+    patterns: [
+      /(?:zustellung|entrega|livraison|bezorging|isporuka).{0,90}(?:fehlgeschlagen|fallad[oa]|[eé]chou[eé]e|mislukt|neuspjel|neuspel)/i,
+      /(?:zoll|aduana|douane|carina).{0,45}(?:geb[uü]hr|tarifa|frais|kosten|naknad|uplata)/i,
+    ],
+  },
+  {
+    type: "Investment / crypto scam",
+    weight: 15,
+    patterns: [
+      /(?:auszahlung|retiro|retrait|opname|isplata).{0,100}(?:geb[uü]hr|tarifa|frais|kosten|naknad|porez|steuer|impuesto|belasting)/i,
+      /(?:investition|inversi[oó]n|investissement|investering|ulaganje).{0,80}(?:garantiert|garantizad|garanti|gegarandeerd|zagarantovan|bez rizika)/i,
+    ],
+  },
+  {
+    type: "Prize / advance-fee scam",
+    weight: 14,
+    patterns: [
+      /(?:lotterie|loter[ií]a|loterie|loterij|lutrija).{0,90}(?:gewonnen|ganad|gagn[eé]|dobit|osvoj)/i,
+      /(?:bearbeitungsgeb[uü]hr|gastos de tramitaci[oó]n|frais de dossier|administratiekosten|tro[sš]kovi obrade).{0,70}(?:preis|premio|prix|prijs|nagrad|dobit)/i,
+    ],
+  },
+  {
+    type: "Job scam",
+    weight: 12,
+    patterns: [
+      /(?:stellenangebot|oferta de trabajo|offre d['’]emploi|vacature|ponuda za posao).{0,120}(?:vorauszahlung|pago previo|paiement anticip[eé]|vooraf betalen|uplati unaprijed|uplati unapred)/i,
+      /(?:telegram|whatsapp).{0,80}(?:interview|vorstellungsgespr[aä]ch|entrevista|entretien|sollicitatie|razgovor za posao)/i,
+    ],
+  },
+  {
+    type: "Tech support scam",
+    weight: 14,
+    patterns: [
+      /(?:rufen sie|llame|appelez|bel).{0,30}(?:microsoft|support|soporte|assistance|helpdesk).{0,35}(?:sofort|ahora|imm[eé]diatement|meteen)/i,
+      /(?:instalirajte|instaliraj).{0,30}(?:anydesk|teamviewer|udaljeni pristup|daljinski pristup)/i,
+    ],
+  },
+  {
+    type: "Marketplace / payment scam",
+    weight: 15,
+    patterns: [
+      /(?:verk[aä]ufer|vendedor|vendeur|verkoper|prodava[cč]).{0,100}(?:kurier|mensajero|coursier|koerier|dostav)/i,
+      /(?:zahlung erhalten|pago recibido|paiement re[cç]u|betaling ontvangen|uplata primljena).{0,100}(?:konto aktualisieren|actualizar la cuenta|mettre [àa] jour le compte|rekening upgraden|nadograditi ra[cč]un)/i,
+    ],
+  },
+  {
+    type: "Document / SMS phishing",
+    weight: 13,
+    patterns: [
+      /(?:dokument|rechnung|factura|document|facture|bericht|poruka).{0,80}(?:ausstehend|pendiente|en attente|klaarstaat|na [cč]ekanju)/i,
+      /(?:[oö]ffnen sie|abra|ouvrez|open|otvorite).{0,35}(?:dokument|rechnung|factura|document|facture|bericht|poruku).{0,50}(?:link|enlace|lien|poveznic)/i,
+    ],
+  },
+  {
+    type: "Romance / impersonation scam",
+    weight: 11,
+    patterns: [
+      /(?:im ausland|en el extranjero|[àa] l['’][eé]tranger|in het buitenland|u inostranstvu).{0,100}(?:geld|dinero|argent|novac|[uü]berweisung|transferencia|virement|overschrijving|uplata)/i,
+      /(?:liebling|cari[nñ]o|mon amour|schat|draga|dragi).{0,120}(?:geschenkkarte|tarjeta de regalo|carte cadeau|cadeaukaart|poklon kartic|novac)/i,
+    ],
+  },
 ];
 
 const urgencyPatterns = [
@@ -194,6 +286,11 @@ const urgencyPatterns = [
   /don['’]t miss/i,
   /last chance/i,
   /will be (?:deleted|frozen|suspended|closed)/i,
+  /(?:dringend|sofort|unverz[uü]glich|innerhalb von \d+ (?:minuten|stunden))/i,
+  /(?:urgente|inmediatamente|ahora mismo|dentro de \d+ (?:minutos|horas))/i,
+  /(?:urgent|imm[ée]diatement|sans d[ée]lai|dans les \d+ (?:minutes|heures))/i,
+  /(?:dringend|onmiddellijk|meteen|binnen \d+ (?:minuten|uur))/i,
+  /(?:hitno|odmah|smjesta|smesta|u roku od \d+ (?:minuta|sati))/i,
 ];
 
 const credentialPatterns = [
@@ -207,9 +304,19 @@ const credentialPatterns = [
   /prijav/i,
   /bank details/i,
   /payment information/i,
+  /(?:einmalcode|einmalpasswort|zugangscode)/i,
+  /(?:c[oó]digo de un solo uso|c[oó]digo de acceso)/i,
+  /(?:code [àa] usage unique|code d['’]acc[eè]s)/i,
+  /(?:eenmalige code|toegangscode)/i,
+  /(?:jednokratni kod|pristupni podaci|podaci za prijavu)/i,
   /card (?:number|details|information)/i,
   /security (?:code|question)/i,
   /social security/i,
+  /(?:passwort|kennwort|anmeldedaten|sicherheitscode|tan[- ]?code)/i,
+  /(?:contrase[nñ]a|credenciales|inicio de sesi[oó]n|c[oó]digo de verificaci[oó]n)/i,
+  /(?:mot de passe|identifiants|connexion|code de v[ée]rification)/i,
+  /(?:wachtwoord|inloggegevens|aanmelden|verificatiecode)/i,
+  /(?:lozinka|lozinku|podaci za prijavu|verifikacijski kod|sigurnosni kod)/i,
 ];
 
 const paymentPatterns = [
@@ -228,7 +335,14 @@ const paymentPatterns = [
   /deposit/i,
   /payment method/i,
   /withdrawal/i,
+  /(?:geld senden|dinero enviar|envoyer de l['’]argent|geld sturen|po[sš]alji novac)/i,
+  /(?:bearbeitungsgeb[uü]hr|tarifa de tramitaci[oó]n|frais de traitement|verwerkingskosten|naknada za obradu)/i,
   /hourly rate/i,
+  /(?:[uü]berweisung|geschenkkarte|gutschein|zahlung|kryptow[aä]hrung)/i,
+  /(?:transferencia|tarjeta de regalo|pago|dep[oó]sito|criptomoneda)/i,
+  /(?:virement|carte cadeau|paiement|d[ée]p[oô]t|cryptomonnaie)/i,
+  /(?:overschrijving|cadeaukaart|betaling|storting|cryptovaluta)/i,
+  /(?:bankovna uplata|poklon kartica|darovna kartica|kripto valuta|depozit)/i,
 ];
 
 const consequencePatterns = [
@@ -238,10 +352,16 @@ const consequencePatterns = [
   /frozen/i,
   /deleted/i,
   /account on hold/i,
+  /(?:konto|cuenta|compte|rekening|ra[cč]un|nalog).{0,45}(?:abl[aä]uft|caducar[aá]|expirera|verloopt|isti[cč]e)/i,
   /unable to credit/i,
   /payment.{0,25}(?:failed|declined)/i,
   /data.{0,30}(?:lost|deleted|removed)/i,
   /(?:blokiran|zakljucan|zamrznut|obrisan)/i,
+  /(?:gesperrt|deaktiviert|eingefroren|gel[oö]scht)/i,
+  /(?:bloquead[oa]|suspendid[oa]|desactivad[oa]|eliminad[oa])/i,
+  /(?:bloqu[ée]|suspendu|d[ée]sactiv[ée]|supprim[ée])/i,
+  /(?:geblokkeerd|opgeschort|gedeactiveerd|verwijderd)/i,
+  /(?:zaklju[cč]an|zamrznut|deaktiviran|obrisan)/i,
 ];
 
 const rewardPatterns = [
@@ -252,8 +372,14 @@ const rewardPatterns = [
   /guaranteed.{0,20}(?:profit|return|income)/i,
   /earn.{0,20}(?:daily|weekly|per day|\$\s?\d+)/i,
   /paid you/i,
+  /(?:garantierter gewinn|beneficio garantizado|b[eé]n[eé]fice garanti|gegarandeerde winst|zagarantovana zarada|zajam[cč]ena zarada)/i,
   /receive.{0,20}\$\s?\d+/i,
   /(?:nagrada|poklon|zarad)/i,
+  /(?:gewinn|gewonnen|belohnung|garantierte rendite)/i,
+  /(?:premio|ganador|recompensa|rentabilidad garantizada)/i,
+  /(?:prix|gagnant|r[ée]compense|rendement garanti)/i,
+  /(?:prijs|winnaar|beloning|gegarandeerd rendement)/i,
+  /(?:dobitnik|osvojili|zagarantovana zarada|zajam[cč]ena zarada)/i,
 ];
 
 const callToActionPatterns = [
@@ -263,6 +389,11 @@ const callToActionPatterns = [
   /(?:call|contact|text).{0,25}\d{7,}/i,
   /(?:register|sign up|schedule|book).{0,35}(?:now|here|meeting|account)/i,
   /(?:pay|send|transfer|buy).{0,40}(?:fee|deposit|gift card|crypto|money|half|\$\s?\d+)/i,
+  /(?:klicken|[oö]ffnen|best[aä]tigen|bezahlen|senden).{0,45}(?:link|konto|daten|geb[uü]hr|code|zahlung)/i,
+  /(?:haga clic|abrir|confirmar|verificar|pagar|enviar).{0,45}(?:enlace|cuenta|datos|tarifa|c[oó]digo|pago)/i,
+  /(?:cliquez|ouvrir|confirmer|v[ée]rifier|payer|envoyer).{0,45}(?:lien|compte|donn[ée]es|frais|code|paiement)/i,
+  /(?:klik|open|bevestig|verifieer|betaal|stuur).{0,45}(?:link|rekening|gegevens|kosten|code|betaling)/i,
+  /(?:klikni|otvori|potvrdi|provjeri|proveri|uplati|po[sš]alji).{0,45}(?:link|nalog|ra[cč]un|podatke|naknadu|kod|uplatu)/i,
 ];
 
 const impersonationPatterns = [
@@ -270,6 +401,8 @@ const impersonationPatterns = [
   /(?:hiring|recruiting|support|security|billing) (?:department|team)/i,
   /sincerely.{0,30}(?:support|security|billing)/i,
   /copyright.{0,50}(?:apple|microsoft|google|amazon)/i,
+  /(?:sicherheits|kundenservice|soporte|seguridad|assistance|s[ée]curit[ée]|klantenservice|beveiliging).{0,25}(?:team|abteilung|equipo|service|afdeling)/i,
+  /(?:banka|po[sš]ta|policija|porezna uprava).{0,60}(?:nalog|ra[cč]un|uplata|kazna|potvrda)/i,
 ];
 
 const secrecyPatterns = [
@@ -277,12 +410,17 @@ const secrecyPatterns = [
   /(?:keep|this is).{0,25}(?:secret|confidential|between us)/i,
   /(?:move|continue|contact me).{0,40}(?:whatsapp|telegram|signal app|private chat)/i,
   /(?:ne govori|nemoj re[cć]i|ne kontaktiraj).{0,35}(?:banci|policiji|porodici|nikome)/i,
+  /(?:nicht weitersagen|geheim halten|no se lo diga|mant[eé]ngalo en secreto|ne le dites pas|gardez.*secret|vertel het niemand|houd.*geheim)/i,
 ];
 
 const authorityPatterns = [
   /(?:ceo|director|manager|boss|police|tax office|irs|court|government).{0,90}(?:urgent|transfer|payment|gift card|confidential|warrant|arrest)/i,
   /(?:i am|this is|speaking on behalf of).{0,45}(?:your boss|the ceo|the bank|the police|support|security team)/i,
   /(?:policija|sud|porezna|direktor|šef|sef).{0,80}(?:hitno|uplati|transfer|kazna|uhap|povjerljivo)/i,
+  /(?:gesch[aä]ftsf[uü]hrer|direktor|polizei|finanzamt).{0,80}(?:dringend|zahlung|[uü]berweisung|vertraulich)/i,
+  /(?:director|polic[ií]a|agencia tributaria).{0,80}(?:urgente|pago|transferencia|confidencial)/i,
+  /(?:directeur|police|imp[oô]ts).{0,80}(?:urgent|paiement|virement|confidentiel)/i,
+  /(?:directeur|politie|belastingdienst).{0,80}(?:dringend|betaling|overschrijving|vertrouwelijk)/i,
 ];
 
 const evasionPatterns = [
@@ -296,6 +434,56 @@ const benignContextPatterns = [
   /(?:do not click|do not reply|never share).{0,80}(?:suspicious|scam|phishing|unknown)/i,
   /(?:reported|marked|identified).{0,30}(?:as )?(?:a )?(?:scam|phishing)/i,
 ];
+
+const languageProfiles = [
+  { label: "English", patterns: [/\b(?:your|account|please|click|payment|verify|message)\b/i, /\b(?:the|this|will|with|from)\b/i] },
+  { label: "German", patterns: [/\b(?:ihr|konto|bitte|klicken|zahlung|best[aä]tigen|nachricht)\b/i, /\b(?:dringend|sofort|passwort|daten|[uü]berweisung)\b/i] },
+  { label: "Spanish", patterns: [/\b(?:su|cuenta|por favor|haga clic|pago|verificar|mensaje)\b/i, /\b(?:urgente|contrase[nñ]a|datos|transferencia|ahora)\b/i] },
+  { label: "French", patterns: [/\b(?:votre|compte|veuillez|cliquez|paiement|v[ée]rifier|message)\b/i, /\b(?:urgent|mot de passe|donn[ée]es|virement|imm[ée]diatement)\b/i] },
+  { label: "Dutch", patterns: [/\b(?:uw|rekening|alstublieft|klik|betaling|verifieer|bericht)\b/i, /\b(?:dringend|wachtwoord|gegevens|overschrijving|onmiddellijk)\b/i] },
+] as const;
+
+const generalLanguagePatterns: Record<string, RegExp[]> = {
+  English: [/\b(?:and|with|from|that|this|please|your|have|will)\b/i],
+  German: [/\b(?:und|mit|von|dass|dies|bitte|ihre|haben|wird|nicht)\b/i],
+  Spanish: [/\b(?:y|con|desde|que|este|esta|por favor|usted|tiene|ser[aá]|no)\b/i],
+  French: [/\b(?:et|avec|depuis|que|ce|cette|veuillez|vous|votre|sera|pas)\b/i],
+  Dutch: [/\b(?:en|met|van|dat|dit|deze|alstublieft|heeft|wordt|niet)\b/i],
+};
+
+const bhsLanguagePatterns = [
+  /\b(?:va[sš]|ra[cč]un|nalog|molimo|kliknite|uplata|potvrdite|poruka)\b/i,
+  /\b(?:odmah|hitno|lozink|podatke|po[sš]alj)\w*/i,
+  /[čćđšž]/i,
+];
+
+const bhsCommonLanguagePatterns = [
+  /\b(?:sa|iz|da|ovo|ova|molim|va[sš]|imate|nije|biti|poruka|ra[cč]un|nalog)\b/i,
+];
+
+const regionalBhsProfiles = [
+  {
+    label: "Bosnian",
+    patterns: [
+      /\b(?:ra[cč]un [cć]e|[cć]e biti blokiran|historij|op[cć]in|lahko)\w*/i,
+      /\b(?:saglasnost|li[cč]ni|sljede[cć]|provjer)\w*/i,
+    ],
+  },
+  {
+    label: "Croatian",
+    patterns: [
+      /\bbit [cć]e\b/i,
+      /\b(?:poveznic|zapork|tisu[cć]|sije[cč]|tvrtk|osobn|uvjet|povijest|neovisn)\w*/i,
+    ],
+  },
+  {
+    label: "Serbian",
+    patterns: [
+      /[\u0400-\u04ff]/,
+      /\b(?:prover|bezbed|slede[cć]|bi[cć]e|nalog|uslov|preduze[cć]|hiljad)\w*/i,
+    ],
+  },
+] as const;
 
 const suspiciousTlds = new Set([
   "zip",
@@ -693,6 +881,24 @@ function normalizeForDetection(message: string) {
   return deobfuscated === normalized ? normalized : `${normalized} ${deobfuscated}`;
 }
 
+function detectMessageLanguage(message: string) {
+  if (countPatternMatches(message, [...bhsLanguagePatterns, ...bhsCommonLanguagePatterns])) {
+    const regional = regionalBhsProfiles
+      .map((profile) => ({ label: profile.label, hits: countPatternMatches(message, [...profile.patterns]) }))
+      .sort((a, b) => b.hits - a.hits);
+    if (regional[0]?.hits) return regional[0].label;
+    return "Bosnian / Croatian / Serbian";
+  }
+
+  const ranked = languageProfiles
+    .map((profile) => ({
+      label: profile.label,
+      hits: countPatternMatches(message, [...profile.patterns, ...(generalLanguagePatterns[profile.label] ?? [])]),
+    }))
+    .sort((a, b) => b.hits - a.hits);
+  return ranked[0]?.hits ? ranked[0].label : "Unknown / mixed";
+}
+
 function messageAnalysis(message: string, urls: string[]) {
   const normalizedMessage = normalizeForDetection(message);
   const categoryScores = categoryRules.map((rule) => {
@@ -895,6 +1101,7 @@ function messageAnalysis(message: string, urls: string[]) {
       uppercaseWords,
       exclamations,
     },
+    detectedLanguage: detectMessageLanguage(normalizedMessage),
   };
 }
 
@@ -1312,6 +1519,7 @@ async function runScan(message: string, mode: "quick" | "deep", env: ScannerEnv,
         evasionPatterns.length +
         benignContextPatterns.length,
       messageStats: local.stats,
+      detectedLanguage: local.detectedLanguage,
       signals: local.signals,
       categoryMatches: local.categories,
       providerCoverage,
