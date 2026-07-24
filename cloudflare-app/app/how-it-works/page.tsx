@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
         <div className="info-section-copy">
           <span className="info-section-label">Independent providers</span>
           <h2>Reputation evidence is checked in parallel</h2>
-          <p>Configured provider checks run concurrently under a short time limit. A missing or timed-out provider is shown as unavailable—it is never silently interpreted as a clean result.</p>
+          <p>Configured provider checks run concurrently under a short time limit. If a provider is missing or times out, it is shown as unavailable. It is never silently interpreted as a clean result.</p>
           <ul className="info-points">
             <li><strong>Quick Scan:</strong> message rules, URL structure, Google Safe Browsing, and RDAP domain age.</li>
             <li><strong>Deep Scan:</strong> everything in Quick Scan plus the latest existing VirusTotal URL report.</li>
@@ -71,7 +71,7 @@ export default function HowItWorksPage() {
           <ul className="info-points">
             <li><strong>Overview</strong> explains the risk, key findings, inspected signals, provider coverage, and recommended actions.</li>
             <li><strong>Technical</strong> exposes evidence, URL facts, provider responses, and extracted indicators of compromise.</li>
-            <li>Low, Medium, and High describe observed risk—not a promise that content is safe or malicious with certainty.</li>
+            <li>Low, Medium, and High describe observed risk. They do not promise that content is certainly safe or malicious.</li>
           </ul>
         </div>
       </section>

@@ -15,7 +15,7 @@ export default function LimitationsPage() {
     <InfoShell
       page="limitations"
       eyebrow="Know the boundaries"
-      title="What a scan can—and cannot—prove"
+      title="What a scan can and cannot prove"
       intro="ScamShield helps prioritize risk. It cannot authenticate a sender, guarantee a link is safe, replace endpoint protection, or investigate evidence that was not included in the submitted text."
       sections={sections}
     >
@@ -26,7 +26,7 @@ export default function LimitationsPage() {
           <h2>A brand-new attack may have no history yet</h2>
           <p>Blocklists and reputation databases improve after threats are discovered. A newly registered phishing page, private campaign, or one-time domain may return no provider warning during its earliest hours.</p>
           <ul className="info-points">
-            <li>“No report” means no usable provider record was found—not that the destination is trusted.</li>
+            <li>“No report” means no usable provider record was found. It does not mean that the destination is trusted.</li>
             <li>A clean provider result covers only that provider and that moment in time.</li>
             <li>Targeted scams may never become common enough to appear on public reputation lists.</li>
           </ul>
@@ -51,7 +51,7 @@ export default function LimitationsPage() {
         <div className="info-number"><span>03</span><small>Uncertainty</small></div>
         <div className="info-section-copy">
           <span className="info-section-label">False positives and false negatives</span>
-          <h2>Rules can overreact—or miss unfamiliar wording</h2>
+          <h2>Rules can overreact or miss unfamiliar wording</h2>
           <p>Legitimate billing, recruiting, or support messages sometimes use urgent language. Skilled attackers can also avoid familiar phrases, use images instead of text, or build trust gradually before asking for money.</p>
           <ul className="info-points">
             <li>High means strong warning evidence was found; it is not a legal determination of fraud.</li>
@@ -75,7 +75,7 @@ export default function LimitationsPage() {
         </div>
       </section>
 
-      <aside className="method-note danger-note"><span aria-hidden="true">!</span><div><strong>When the stakes are high</strong><p>If the request involves money, account access, identity documents, workplace systems, threats, or personal safety, stop and verify through an official channel or a qualified professional—even if the scan result is Low.</p></div></aside>
+      <aside className="method-note danger-note"><span aria-hidden="true">!</span><div><strong>When the stakes are high</strong><p>If the request involves money, account access, identity documents, workplace systems, threats, or personal safety, stop and verify through an official channel or a qualified professional. This remains important even if the scan result is low.</p></div></aside>
     </InfoShell>
   );
 }

@@ -18,17 +18,17 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
     metadataBase: new URL(CANONICAL_ORIGIN),
     title: {
-      default: "ScamShield — Suspicious message and URL checker",
-      template: "%s — ScamShield",
+      default: "ScamShield: Suspicious message and URL checker",
+      template: "%s | ScamShield",
     },
     description:
       "Explainable scam risk analysis with message heuristics, URL inspection, live reputation providers, and consent-based VirusTotal analysis.",
     openGraph: {
-      title: "ScamShield — Pause before you trust the message",
+      title: "ScamShield: Pause before you trust the message",
       description: "Check suspicious messages and links with explainable risk signals and clear next steps.",
       type: "website",
       url: CANONICAL_ORIGIN,
-      images: [{ url: `${CANONICAL_ORIGIN}/scamshield-project-preview.png`, width: 1731, height: 909, alt: "ScamShield — Pause before you trust the message" }],
+      images: [{ url: `${CANONICAL_ORIGIN}/scamshield-project-preview.png`, width: 1731, height: 909, alt: "ScamShield: Pause before you trust the message" }],
     },
     twitter: {
       card: "summary_large_image",

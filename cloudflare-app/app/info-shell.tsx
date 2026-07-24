@@ -29,7 +29,7 @@ const pageVisuals: Record<InfoPageKey, { code: string; label: string; title: str
     code: "RULE",
     label: "Evidence model",
     title: "Signals are weighted, never hidden.",
-    detail: "The score is built from observable evidence—not an unexplained AI confidence number.",
+    detail: "The score is built from observable evidence, not an unexplained AI confidence number.",
     status: "3 risk bands",
   },
   privacy: {
