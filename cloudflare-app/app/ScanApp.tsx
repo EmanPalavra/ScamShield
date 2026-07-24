@@ -207,7 +207,7 @@ function providerIcon(state: ProviderState) {
   if (state === "danger") return "×";
   if (state === "warning") return "!";
   if (state === "clear") return "✓";
-  return "—";
+  return "·";
 }
 
 function formatDuration(milliseconds: number) {
@@ -429,7 +429,7 @@ export function ScanApp() {
   async function copyReport() {
     if (!result) return;
     const report = [
-      `${t("ScamShield report")} — ${t(result.riskLevel)} ${t("risk")} (${result.riskPercent}%)`,
+      `${t("ScamShield report")}: ${t(result.riskLevel)} ${t("risk")} (${result.riskPercent}%)`,
       `${t("Assessment")}: ${t(result.riskLabel)}`,
       `${t("Pattern")}: ${t(result.scamType)}`,
       "",

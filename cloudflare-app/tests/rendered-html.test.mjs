@@ -535,7 +535,7 @@ test("keeps every information-shell label in the translation catalog", async () 
     "Consent gated",
     "Human check",
     "Language, URL structure, live reputation, and an explainable recommendation.",
-    "The score is built from observable evidence—not an unexplained AI confidence number.",
+    "The score is built from observable evidence, not an unexplained AI confidence number.",
     "Message analysis stays inside the scan flow; URL reputation checks have visible provider boundaries.",
     "Unknown campaigns, missing context, and provider gaps still require independent verification.",
     "Use these pages to understand what the result means before acting on it.",
@@ -802,7 +802,7 @@ test("renders all transparency pages", async () => {
     "/how-it-works": "From suspicious message to clear next step",
     "/methodology": "A score built from visible evidence",
     "/privacy": "Privacy boundaries you can understand",
-    "/limitations": "What a scan can—and cannot—prove",
+    "/limitations": "What a scan can and cannot prove",
   };
 
   for (const [path, heading] of Object.entries(pages)) {

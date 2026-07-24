@@ -52,7 +52,7 @@ export default function MethodologyPage() {
         <div className="info-section-copy">
           <span className="info-section-label">Live reputation</span>
           <h2>External checks add evidence, not silent assumptions</h2>
-          <p>Google Safe Browsing, RDAP, and—during Deep Scan—VirusTotal history run concurrently. Provider calls have a bounded wait time and short-lived cache so a slow third party does not indefinitely block the report.</p>
+          <p>Google Safe Browsing and RDAP run concurrently with VirusTotal history during Deep Scan. Provider calls have a bounded wait time and short-lived cache so a slow third party does not indefinitely block the report.</p>
           <ul className="info-points">
             <li>Clear means the queried source returned no listed threat for that check.</li>
             <li>Unavailable means a key, quota, network response, or provider result was missing.</li>
@@ -67,9 +67,9 @@ export default function MethodologyPage() {
           <span className="info-section-label">Conservative interpretation</span>
           <h2>Three bands communicate urgency without false certainty</h2>
           <div className="risk-band-grid" aria-label="Risk score bands">
-            <div className="band-low"><strong>Low</strong><span>0–33</span><p>No strong signal confirmed. Continue with normal caution.</p></div>
-            <div className="band-medium"><strong>Medium</strong><span>34–66</span><p>Independent verification is needed before interaction.</p></div>
-            <div className="band-high"><strong>High</strong><span>67–99</span><p>Do not click, reply, pay, or share sensitive information.</p></div>
+            <div className="band-low"><strong>Low</strong><span>0 to 33</span><p>No strong signal confirmed. Continue with normal caution.</p></div>
+            <div className="band-medium"><strong>Medium</strong><span>34 to 66</span><p>Independent verification is needed before interaction.</p></div>
+            <div className="band-high"><strong>High</strong><span>67 to 99</span><p>Do not click, reply, pay, or share sensitive information.</p></div>
           </div>
         </div>
       </section>
