@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "scam",
   "compatibility_date": "2026-07-23",
+  "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
   "durable_objects": {
     "bindings": [
