@@ -1,0 +1,133 @@
+[
+  {
+    "id": "user-scams",
+    "name": "ScamShield user-collected scam messages",
+    "url": null,
+    "license": "Private evaluation data; do not redistribute",
+    "labels": "User-reported",
+    "language": "English",
+    "expectedSamples": 21,
+    "includedBy": "../Scams.txt"
+  },
+  {
+    "id": "uci-sms-spam",
+    "name": "UCI SMS Spam Collection",
+    "url": "https://archive.ics.uci.edu/dataset/228/sms+spam+collection",
+    "downloadUrl": "https://cdn.uci-ics-mlr-prod.aws.uci.edu/228/sms%2Bspam%2Bcollection.zip",
+    "license": "CC BY 4.0",
+    "labels": "ham/spam corpus labels",
+    "language": "English",
+    "expectedSamples": 5574,
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "spaphish-v5",
+    "name": "SpaPhish v5",
+    "url": "https://data.mendeley.com/datasets/hz2d6gz7pc/5",
+    "downloadIndex": "https://data.mendeley.com/public-api/datasets/hz2d6gz7pc/files?folder_id=root&version=5",
+    "doi": "10.17632/hz2d6gz7pc.5",
+    "license": "CC BY 4.0",
+    "labels": "Three expert annotations with adjudication",
+    "language": "Spanish",
+    "expectedSamples": 1395,
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "english-smishing-5971",
+    "name": "SMS PHISHING DATASET FOR MACHINE LEARNING AND PATTERN RECOGNITION",
+    "url": "https://data.mendeley.com/datasets/f45bkkt8pr/1",
+    "doi": "10.17632/f45bkkt8pr.1",
+    "license": "CC BY 4.0",
+    "labels": "ham/spam/smishing corpus labels",
+    "language": "English",
+    "expectedSamples": 5971,
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "sarajevo-sms-1.1",
+    "name": "Sarajevo Corpus of SMS Messages in Bosnian",
+    "url": "https://www.clarin.si/repository/xmlui/handle/11356/1956",
+    "doi": "10.1515/9783111046622-009",
+    "license": "CC BY 4.0",
+    "labels": "Authentic, voluntarily donated legitimate SMS",
+    "language": "Bosnian",
+    "expectedSamples": 10000,
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "french-88milsms",
+    "name": "88milSMS",
+    "url": "https://catalogue.elra.info/en-us/repository/browse/ELRA-W0082/",
+    "downloadUrl": "https://repository.ortolang.fr/api/content/comere/8/cmr-88milsms/cmr-88milsms-tei-v1.xml",
+    "license": "CC BY 4.0",
+    "labels": "Authentic, anonymized legitimate SMS",
+    "language": "French",
+    "expectedSamples": 88522,
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "dortmund-chat-2.0",
+    "name": "Dortmund Chat Corpus 2.0",
+    "url": "https://clarin.bbaw.de/de/objects/dwds%3A10/",
+    "license": "CC BY 4.0",
+    "labels": "Authentic legitimate chat messages",
+    "language": "German",
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "dutch-whatsapp-berntzen",
+    "name": "WhatsApp Corpus Berntzen",
+    "url": "https://b2find.eudat.eu/dataset/9dc6e451-9a87-545a-b2a9-f384e0c95b0f",
+    "doi": "10.17026/DANS-XZZ-UGTW",
+    "license": "CC BY 4.0",
+    "labels": "Consented authentic legitimate WhatsApp chats",
+    "language": "Dutch",
+    "includedBy": "pnpm run evaluate:download"
+  },
+  {
+    "id": "authority-scam-examples",
+    "name": "Authority-confirmed multilingual scam examples",
+    "urls": [
+      "https://www.verbraucherzentrale.de/wissen/digitale-welt/mobilfunk-und-festnetz/paketdienstsms-vorsicht-abzocke-58988",
+      "https://www.polizei-beratung.de/themen-und-tipps/betrug/messenger/",
+      "https://www.cybermalveillance.gouv.fr/tous-nos-contenus/actualites/escroqueries-livraison-colis",
+      "https://www.cybermalveillance.gouv.fr/tous-nos-contenus/actualites/lhameconnage-au-faux-numero-dopposition-bancaire",
+      "https://www.cybermalveillance.gouv.fr/tous-nos-contenus/actualites/lhameconnage-a-la-vignette-critair",
+      "https://www.cybermalveillance.gouv.fr/tous-nos-contenus/actualites/smishing-hameconnage-sms",
+      "https://www.fraudehelpdesk.nl/valse-email/",
+      "https://www.fraudehelpdesk.nl/alert/valse-sms-namens-banken-en-bitvavo/",
+      "https://www.fraudehelpdesk.nl/alert/valse-sms-uit-naam-ideal/",
+      "https://consumer.ftc.gov/consumer-alerts/2025/01/got-text-about-unpaid-tolls-its-probably-scam",
+      "https://consumer.ftc.gov/consumer-alerts/2026/01/text-or-email-about-your-tax-refund-scam",
+      "https://consumer.ftc.gov/consumer-alerts/2025/04/think-text-message-usps-it-could-be-scam",
+      "https://www.cert.rs/files/shares/Smising%20i%20razvoj%20SMS%20prevara%20lat.pdf",
+      "https://www.cert.rs/rs/obavestenje/1513-Aktuelna-fi%C5%A1ing-kampanja-usmerena-na-korisnike-aplikacije-WhatsApp.html"
+    ],
+    "license": "Quoted short examples for security evaluation; source attribution retained",
+    "labels": "Confirmed or reported as fraudulent by consumer-protection, police, or national CERT sources",
+    "language": "English, German, French, Dutch, Bosnian/Croatian/Serbian",
+    "expectedSamples": 75,
+    "includedBy": "evaluation/authority-scam-examples.ts, evaluation/authority-scam-campaigns.ts, evaluation/authority-scam-audit.ts"
+  },
+  {
+    "id": "imc25-smishing",
+    "name": "Fishing for Smishing: IMC 2025 labeled public-report dataset",
+    "url": "https://github.com/reportsmishing/Smishing-Dataset-IMC25",
+    "doi": "10.1145/3730567.3764431",
+    "license": "CC BY 4.0",
+    "labels": "Real public user reports, research-labeled by scam category and language",
+    "language": "Multilingual",
+    "expectedSamples": 33869,
+    "includedBy": "evaluation/train-local-model.ts; also retained in the historical pre-model holdout report"
+  },
+  {
+    "id": "smishx",
+    "name": "SmishX manually re-labeled SMS dataset",
+    "url": "https://github.com/yizhu-joy/SmishX",
+    "license": "MIT",
+    "labels": "Manually re-labeled smishing/spam/legitimate",
+    "language": "English",
+    "expectedSamples": 1200,
+    "includedBy": "evaluation/train-local-model.ts; also retained in the historical pre-model holdout report"
+  }
+]

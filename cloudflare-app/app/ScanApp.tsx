@@ -3,169 +3,23 @@
 import type { CSSProperties, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScamShieldLogoMark, SiteFooter, SiteHeader } from "./site-chrome";
+import { DeepScanPanel } from "./scanner/DeepScanPanel";
 import { useLanguage } from "./i18n";
 import { exampleMessages } from "./translations";
+import {
+  formatDomainAge,
+  formatDuration,
+  providerIcon,
+  riskIcon,
+} from "./scanner/format";
+import { findSensitiveUrlParameters } from "./scanner/sensitive-url";
+import type {
+  AnalystTab,
+  DeepJob,
+  RuntimeConfig,
+  ScanResult,
+} from "./scanner/types";
 
-type RiskLevel = "Low" | "Medium" | "High";
-type ProviderState = "clear" | "warning" | "danger" | "unavailable" | "not-run";
-type AnalystTab = "Evidence" | "URLs" | "Providers" | "IOCs";
-
-interface Provider {
-  name: string;
-  state: ProviderState;
-  label: string;
-  detail: string;
-  configured: boolean;
-  subject?: string;
-}
-
-interface LinkReport {
-  url: string;
-  domain: string;
-  riskScore: number;
-  reasons: string[];
-  providers: Provider[];
-  domainAgeDays: number | null;
-  virusTotal: {
-    found: boolean;
-    stats: Record<string, number> | null;
-    lastAnalysisDate: number | null;
-  } | null;
-  domainIntelligence: {
-    brand: {
-      state: "clear" | "warning" | "danger";
-      suspectedBrand: string | null;
-      officialDomain: string | null;
-      similarity: number;
-      distance: number | null;
-      isTyposquat: boolean;
-      signals: string[];
-    };
-    dns: {
-      state: ProviderState;
-      addresses: string[];
-      ipv6: string[];
-      nameservers: string[];
-      mailServers: string[];
-      cname: string | null;
-      minTtl: number | null;
-      dnssecAuthenticated: boolean | null;
-    };
-    certificate: {
-      state: ProviderState;
-      source: "Certificate Transparency";
-      recordCount: number;
-      activeRecordCount: number;
-      latestExpiry: string | null;
-      issuer: string | null;
-      names: string[];
-    };
-    redirects: {
-      state: ProviderState;
-      checked: boolean;
-      count: number;
-      chain: Array<{ url: string; domain: string; status: number }>;
-      finalUrl: string;
-      crossedDomains: boolean;
-      bodyFetched: false;
-      detail: string;
-    };
-  };
-  technical: {
-    protocol: "HTTP" | "HTTPS";
-    tld: string;
-    usesHttps: boolean;
-    isIpAddress: boolean;
-    isPunycode: boolean;
-    isShortener: boolean;
-    hasUserInfo: boolean;
-    hostnameLength: number;
-    pathDepth: number;
-    queryParameters: number;
-  };
-}
-
-interface ScanResult {
-  scanMode: "quick" | "deep";
-  scannedAt: string;
-  riskPercent: number;
-  riskLevel: RiskLevel;
-  riskLabel: string;
-  scamType: string;
-  reasons: string[];
-  actions: string[];
-  evidence: Array<{ source: string; impact: string; detail: string }>;
-  links: LinkReport[];
-  providers: Provider[];
-  iocs: {
-    urls: string[];
-    domains: string[];
-    emails: string[];
-    phones: string[];
-    cryptoWallets: string[];
-  };
-  analysis: {
-    inputType: "Message" | "URL" | "Message + URL";
-    rulesEvaluated: number;
-    messageStats: {
-      characters: number;
-      words: number;
-      lines: number;
-      uppercaseWords: number;
-      exclamations: number;
-    };
-    signals: Array<{
-      name: string;
-      count: number;
-      state: "clear" | "warning" | "danger";
-      detail: string;
-    }>;
-    categoryMatches: Array<{ type: string; score: number; hits: number }>;
-    providerCoverage: {
-      total: number;
-      completed: number;
-      threats: number;
-      warnings: number;
-      unavailable: number;
-      notRun: number;
-    };
-    timing: {
-      localAnalysisMs: number;
-      liveChecksMs: number;
-      totalMs: number;
-    };
-    detectedLanguage: string;
-  };
-  deepScan: {
-    checkedExistingReport: boolean;
-    canSubmitFreshAnalysis: boolean;
-    urls: string[];
-    privacyNotice: string;
-    timingNotice: string;
-  };
-  limits: { maxUrls: number; truncatedUrls: boolean };
-}
-
-interface RuntimeConfig {
-  turnstileSiteKey: string | null;
-  turnstileConfigured: boolean;
-}
-
-interface DeepJob {
-  analysisId: string;
-  statusToken: string;
-  url: string;
-  status: string;
-  completed: boolean;
-  stats: Record<string, number> | null;
-  verdict: string | null;
-  riskState: string;
-  startedAt: number;
-  pollCount: number;
-  engineCount: number;
-  analyzedAt: number | null;
-  error?: string;
-}
 
 declare global {
   interface Window {
@@ -197,31 +51,6 @@ const iocLabels: Record<keyof ScanResult["iocs"], string> = {
   cryptoWallets: "Crypto wallets",
 };
 
-function riskIcon(level: RiskLevel) {
-  if (level === "High") return "×";
-  if (level === "Medium") return "!";
-  return "✓";
-}
-
-function providerIcon(state: ProviderState) {
-  if (state === "danger") return "×";
-  if (state === "warning") return "!";
-  if (state === "clear") return "✓";
-  return "·";
-}
-
-function formatDuration(milliseconds: number) {
-  if (milliseconds < 1_000) return `${milliseconds} ms`;
-  return `${(milliseconds / 1_000).toFixed(milliseconds < 10_000 ? 1 : 0)} s`;
-}
-
-function formatDomainAge(days: number | null) {
-  if (days === null) return "Age unavailable";
-  if (days < 60) return `${days} day${days === 1 ? "" : "s"} old`;
-  if (days < 730) return `${Math.round(days / 30)} months old`;
-  return `${(days / 365).toFixed(1)} years old`;
-}
-
 function wait(milliseconds: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     if (signal.aborted) {
@@ -252,6 +81,7 @@ export function ScanApp() {
   const [copyLabel, setCopyLabel] = useState("Copy report");
   const [config, setConfig] = useState<RuntimeConfig | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [sensitiveUrlConsent, setSensitiveUrlConsent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [selectedDeepUrl, setSelectedDeepUrl] = useState("");
   const [deepJob, setDeepJob] = useState<DeepJob | null>(null);
@@ -353,6 +183,7 @@ export function ScanApp() {
     if (loadingMode === "deep") base.push("Checking existing VirusTotal report");
     return base;
   }, [loadingMode]);
+  const sensitiveUrlParameters = useMemo(() => findSensitiveUrlParameters(message), [message]);
 
   useEffect(() => {
     if (!loadingMode) return;
@@ -372,6 +203,7 @@ export function ScanApp() {
     deepPollController.current?.abort();
     deepPollController.current = null;
     setMessage("");
+    setSensitiveUrlConsent(false);
     setResult(null);
     setError("");
     setConsent(false);
@@ -407,7 +239,7 @@ export function ScanApp() {
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: clean, mode, turnstileToken }),
+        body: JSON.stringify({ message: clean, mode, turnstileToken, sensitiveUrlConsent }),
       });
       const payload = (await response.json()) as ScanResult & { error?: string };
       if (!response.ok) throw new Error(payload.error ?? "The scan could not be completed.");
@@ -543,7 +375,7 @@ export function ScanApp() {
       const response = await fetch("/api/deep/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ url: selectedDeepUrl, consent: true, turnstileToken }),
+        body: JSON.stringify({ url: selectedDeepUrl, consent: true, turnstileToken, sensitiveUrlConsent }),
       });
       const payload = (await response.json()) as { analysisId?: string; statusToken?: string; url?: string; status?: string; error?: string };
       if (!response.ok || !payload.analysisId || !payload.statusToken) throw new Error(payload.error ?? "Fresh analysis could not be started.");
@@ -651,7 +483,10 @@ export function ScanApp() {
               <textarea
                 id="message"
                 value={message}
-                onChange={(event) => setMessage(event.target.value)}
+                onChange={(event) => {
+                  setMessage(event.target.value);
+                  setSensitiveUrlConsent(false);
+                }}
                 maxLength={10_000}
                 placeholder="Paste the full SMS, email, chat message, or suspicious URL here…"
                 rows={8}
@@ -659,9 +494,29 @@ export function ScanApp() {
               />
               <div className="field-footer">
                 <span><b aria-hidden="true">!</b> Remove passwords, one-time codes, and private internal links.</span>
-                <button type="button" className="text-button" onClick={() => { setMessage(exampleMessages[locale]); setError(""); }}>Load safe example</button>
+                <button type="button" className="text-button" onClick={() => { setMessage(exampleMessages[locale]); setSensitiveUrlConsent(false); setError(""); }}>Load safe example</button>
               </div>
             </div>
+
+            {sensitiveUrlParameters.length > 0 && (
+              <div className="sensitive-url-sharing" role="group" aria-labelledby="sensitive-url-title">
+                <div>
+                  <strong id="sensitive-url-title">Sensitive URL detected</strong>
+                  <p>
+                    ScamShield will remove values for {sensitiveUrlParameters.join(", ")} before external checks.
+                    Enable exact sharing only if you understand that the complete URL may grant access to an account, session, or private document.
+                  </p>
+                </div>
+                <label className="consent-check">
+                  <input
+                    type="checkbox"
+                    checked={sensitiveUrlConsent}
+                    onChange={(event) => setSensitiveUrlConsent(event.target.checked)}
+                  />
+                  <span>I understand the risk and consent to sharing the complete URL with external security providers.</span>
+                </label>
+              </div>
+            )}
 
             {config?.turnstileConfigured ? (
               <div className="turnstile-wrap" aria-label="Human verification"><div ref={turnstileContainer} /></div>
@@ -930,50 +785,21 @@ export function ScanApp() {
               </div>
             )}
 
-            {result.scanMode === "deep" && (
-              <section className="deep-panel" aria-labelledby="fresh-analysis-title">
-                <div className="deep-heading">
-                  <div className="deep-icon" aria-hidden="true">VT</div>
-                  <div><p className="section-kicker">Optional live re-analysis</p><h3 id="fresh-analysis-title">Request a fresh VirusTotal scan</h3><p>{result.deepScan.timingNotice}</p></div>
-                  <span className="external-badge">External service</span>
-                </div>
-
-                <div className="existing-report-grid">
-                  {result.links.map((link) => (
-                    <div key={link.url}>
-                      <span>{link.domain}</span>
-                      <strong>{link.virusTotal?.found ? "Existing report checked" : "No existing report"}</strong>
-                      <small>{link.virusTotal?.lastAnalysisDate ? `Last analyzed ${new Date(link.virusTotal.lastAnalysisDate * 1_000).toLocaleDateString()}` : "A fresh scan is optional and requires consent."}</small>
-                    </div>
-                  ))}
-                </div>
-
-                {result.deepScan.canSubmitFreshAnalysis ? (
-                  <div className="consent-box">
-                    {result.deepScan.urls.length > 1 && (
-                      <label className="select-label">URL to submit<select value={selectedDeepUrl} onChange={(event) => setSelectedDeepUrl(event.target.value)}>{result.deepScan.urls.map((url) => <option key={url} value={url}>{url}</option>)}</select></label>
-                    )}
-                    <div className="privacy-warning"><span aria-hidden="true">!</span><p>{result.deepScan.privacyNotice}</p></div>
-                    <label className="consent-check"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>I understand and explicitly consent to sending this URL to VirusTotal for a new public analysis.</span></label>
-                    <button className="button deep-submit" type="button" disabled={!consent || deepSubmitting || Boolean(deepJob && !deepJob.completed)} onClick={() => void submitFreshAnalysis()}>
-                      {deepSubmitting ? "Sending securely…" : deepJob && !deepJob.completed ? "Analysis already submitted" : "Start fresh VirusTotal analysis"}
-                    </button>
-                  </div>
-                ) : result.deepScan.urls.length > 0 ? <div className="provider-missing">Fresh analysis needs a VirusTotal API key in the hosted environment.</div> : <div className="empty-state">No URL was found, so a fresh URL analysis cannot be started.</div>}
-
-                {deepJob && (
-                  <div className={`deep-job job-${deepJob.riskState} ${deepJob.completed ? "job-complete" : ""}`} role="status" aria-live="polite">
-                    <div className="job-topline"><div><span className={deepJob.completed ? "job-check" : "spinner"} aria-hidden="true">{deepJob.completed ? "✓" : ""}</span><div><p>VirusTotal live analysis</p><strong>{deepJob.completed ? `Complete · ${deepJob.verdict ?? "report ready"}` : deepJob.error ? "Still processing externally" : `${deepJob.status.replace(/-/g, " ")} · tracking automatically`}</strong></div></div><span>{deepJob.completed ? "DONE" : `${deepElapsedSeconds}s elapsed`}</span></div>
-                    <div className="job-progress" role="progressbar" aria-label="VirusTotal analysis progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={deepJob.completed ? 100 : deepJob.status === "in-progress" ? 72 : 38}><span style={{ width: `${deepJob.completed ? 100 : deepJob.status === "in-progress" ? 72 : 38}%` }} /></div>
-                    <div className="job-stages"><span className="done">Submitted</span><span className={deepJob.status === "in-progress" || deepJob.completed ? "done" : "active"}>Engine analysis</span><span className={deepJob.completed ? "done" : ""}>Final verdict</span></div>
-                    {deepJob.completed && deepJob.stats ? (
-                      <div className="vt-stats"><div><strong>{deepJob.stats.malicious ?? 0}</strong><span>Malicious</span></div><div><strong>{deepJob.stats.suspicious ?? 0}</strong><span>Suspicious</span></div><div><strong>{deepJob.stats.harmless ?? 0}</strong><span>Harmless</span></div><div><strong>{deepJob.stats.undetected ?? 0}</strong><span>Undetected</span></div></div>
-                    ) : <p className="job-message">{deepJob.error ?? "ScamShield has already completed its own report above. VirusTotal controls this external queue; you can continue reviewing the findings while it finishes."}</p>}
-                    {!deepJob.completed && !deepTracking && <button className="refresh-job" type="button" onClick={refreshDeepAnalysis}>Check status now</button>}
-                  </div>
-                )}
-              </section>
-            )}
+            <DeepScanPanel
+              result={result}
+              selectedDeepUrl={selectedDeepUrl}
+              setSelectedDeepUrl={setSelectedDeepUrl}
+              consent={consent}
+              setConsent={setConsent}
+              deepSubmitting={deepSubmitting}
+              deepJob={deepJob}
+              submitFreshAnalysis={submitFreshAnalysis}
+              deepTracking={deepTracking}
+              deepElapsedSeconds={deepElapsedSeconds}
+              refreshDeepAnalysis={refreshDeepAnalysis}
+              sensitiveUrlConsent={sensitiveUrlConsent}
+              setSensitiveUrlConsent={setSensitiveUrlConsent}
+            />
           </section>
         )}
 

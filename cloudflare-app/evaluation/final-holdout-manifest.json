@@ -1,0 +1,28 @@
+{
+  "frozenAt": "2026-07-27",
+  "modelVersion": "local-logreg-2f92cbeb79037618",
+  "policy": "Frozen only after model training, threshold selection, and application regression tests were complete. Evaluate rules-only and hybrid once; do not tune against these results.",
+  "binarySource": {
+    "id": "moz-smishing",
+    "repository": "https://huggingface.co/datasets/MOZNLP/MOZ-Smishing",
+    "paper": "https://doi.org/10.18653/v1/2025.africanlp-1.23",
+    "commit": "1092f9d9a545b29ae6be030ee9713b615fc2d987",
+    "path": "test.csv",
+    "license": "CreativeML Open RAIL-M (dataset card)",
+    "sha256": "814a11d9b05741c4b47eb0d0784b1fd12a2a076f83a714a9908bdda594986ab8",
+    "localFile": "moz-smishing.csv",
+    "language": "Portuguese (Mozambique)"
+  },
+  "recallOnlySource": {
+    "id": "smishtank",
+    "repository": "https://github.com/MarazMia/SMISH_DT",
+    "paper": "https://doi.org/10.48550/arXiv.2402.18430",
+    "commit": "cc54e15c188376d82019631d9198f667b1de862e",
+    "path": "Dataset/smishtank.csv",
+    "license": "Public research corpus; repository has no SPDX license",
+    "sha256": "55dd9a19d48b51a86acd35b97cfa50f77453488434498521ce1f6ba5d52bef15",
+    "localFile": "smishtank-final.csv",
+    "language": "Primarily English",
+    "limitation": "Positive-only community submissions; valid for recall, not precision, false-positive rate, or F1."
+  }
+}

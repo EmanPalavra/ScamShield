@@ -1,0 +1,197 @@
+/* Responsive results */
+@media (max-width: 820px) {
+  .site-header nav {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+
+  .theme-toggle {
+    width: 88px;
+    min-width: 88px;
+    min-height: 40px;
+    padding: 8px 12px;
+    flex: 0 0 88px;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .language-picker summary {
+    min-width: 68px;
+    min-height: 40px;
+  }
+
+  .theme-toggle > span:first-child {
+    width: 16px;
+    flex: 0 0 16px;
+    text-align: center;
+  }
+
+  .theme-toggle > span:last-child {
+    width: 34px;
+    min-width: 34px;
+    display: inline-block !important;
+    text-align: left;
+  }
+
+  .results {
+    overflow: hidden;
+  }
+
+  .results-topline,
+  .results-topline > div:first-child,
+  .result-actions,
+  .risk-copy {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .results-topline {
+    gap: 18px;
+  }
+
+  .result-summary,
+  :root[data-theme="dark"] .result-summary {
+    padding: clamp(20px, 5.5vw, 28px);
+    display: flex;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 24px;
+    background:
+      radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--risk-color) 14%, transparent), transparent 17rem),
+      var(--control);
+  }
+
+  .risk-gauge-shell {
+    width: 100%;
+    align-self: center;
+  }
+
+  .risk-visual,
+  .risk-low .risk-visual,
+  .risk-medium .risk-visual,
+  .risk-high .risk-visual {
+    width: min(164px, 52vw);
+    max-width: 164px;
+  }
+
+  .risk-copy {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .risk-pill {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .risk-copy h3 {
+    max-width: 100%;
+    margin: 15px 0 10px;
+    font-size: clamp(24px, 7.6vw, 34px);
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .risk-copy > p {
+    max-width: 100%;
+    margin: 0 0 18px;
+    font-size: 15px;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+
+  .verdict-command {
+    width: 100%;
+    max-width: none;
+    padding: 14px 15px;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .verdict-command span,
+  .verdict-command strong {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .result-metrics article {
+    overflow: hidden;
+  }
+
+  .result-metrics strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-header {
+    gap: 10px;
+  }
+
+  .site-header nav {
+    width: auto;
+    gap: 7px;
+  }
+
+  .language-picker summary {
+    min-width: 62px;
+    padding-inline: 8px;
+  }
+
+  .language-menu {
+    width: 184px;
+  }
+
+  .results {
+    padding: 19px 12px;
+  }
+
+  .result-summary,
+  :root[data-theme="dark"] .result-summary {
+    padding: 20px 16px;
+    border-radius: 17px;
+  }
+
+  .risk-visual,
+  .risk-low .risk-visual,
+  .risk-medium .risk-visual,
+  .risk-high .risk-visual {
+    width: min(154px, 48vw);
+  }
+
+  .result-actions {
+    gap: 9px;
+  }
+
+  .view-switch,
+  .copy-button {
+    min-height: 43px;
+  }
+
+  .result-metrics {
+    gap: 8px;
+  }
+
+  .result-metrics article {
+    padding: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-name {
+    display: none !important;
+  }
+
+  .result-metrics,
+  .technical-summary {
+    grid-template-columns: 1fr;
+  }
+}

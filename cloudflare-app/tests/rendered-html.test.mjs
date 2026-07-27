@@ -73,6 +73,7 @@ function createRateLimiterNamespace() {
 const env = {
   ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   DISABLE_EXTERNAL_CHECKS: "true",
+  RATE_LIMIT_SIGNING_KEY: "test-rate-limit-signing-key-32-bytes-minimum",
   RATE_LIMITER: createRateLimiterNamespace(),
 };
 const context = { waitUntil() {} };
@@ -268,6 +269,46 @@ test("Durable Object limiter makes an atomic sliding-window decision", () => {
   assert.ok(blocked.retryAfter >= 1);
   assert.throws(() => limiter.check(0, 60), RangeError);
   assert.throws(() => limiter.check(2, 0), RangeError);
+});
+
+test("uses stable, non-enumerable HMAC identifiers for rate-limit buckets", async () => {
+  const bucketNames = [];
+  const recordingNamespace = {
+    getByName(name) {
+      bucketNames.push(name);
+      return {
+        async check(limit) {
+          return { allowed: true, limit, remaining: limit - 1, retryAfter: 0, resetAt: Date.now() + 60_000 };
+        },
+      };
+    },
+  };
+  const protectedEnv = { ...env, RATE_LIMITER: recordingNamespace };
+  const scan = (ip) => request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": ip },
+    body: JSON.stringify({ mode: "quick", message: "ordinary message" }),
+  }, protectedEnv);
+
+  assert.equal((await scan("198.51.100.21")).status, 200);
+  assert.equal((await scan("198.51.100.21")).status, 200);
+  assert.equal((await scan("198.51.100.22")).status, 200);
+  assert.equal(bucketNames[0], bucketNames[1]);
+  assert.notEqual(bucketNames[0], bucketNames[2]);
+  assert.doesNotMatch(bucketNames.join(" "), /198\.51\.100\./);
+  assert.match(bucketNames[0], /^v1:\d+:[a-f0-9]{64}:quick$/);
+});
+
+test("fails closed in production when no rate-limit signing secret is available", async () => {
+  const environmentWithoutSigningKey = { ...env };
+  delete environmentWithoutSigningKey.RATE_LIMIT_SIGNING_KEY;
+  const response = await worker.fetch(new Request("https://scam.example/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.25" },
+    body: JSON.stringify({ mode: "quick", message: "ordinary message" }),
+  }), environmentWithoutSigningKey, context);
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).error, /protection/i);
 });
 
 test("fails closed when global request protection is unavailable", async () => {
@@ -521,6 +562,23 @@ test("detects focused check, identity, gift-card, renewal, and verification-code
   assert.equal((await ordinary.json()).riskLevel, "Low");
 });
 
+test("uses the local model as a conservative fallback for wording missed by rules", async () => {
+  const response = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.90" },
+    body: JSON.stringify({
+      mode: "quick",
+      message: "I am contacting you about an unclaimed allocation registered under your surname. We can arrange release after the administrative form is completed.",
+    }),
+  });
+  assert.equal(response.status, 200);
+  const payload = await response.json();
+  assert.equal(payload.riskLevel, "Medium");
+  assert.equal(payload.analysis.model.raisedAlert, true);
+  assert.ok(payload.analysis.model.probability >= 0.995);
+  assert.match(payload.reasons[0], /local statistical model/i);
+});
+
 test("keeps every information-shell label in the translation catalog", async () => {
   const translations = await readFile(new URL("../app/translations.ts", import.meta.url), "utf8");
   const labels = [
@@ -679,6 +737,47 @@ test("detects localized scam categories beyond credential phishing", async () =>
   }
 });
 
+test("detects calibrated real-world multilingual scam wording without flagging routine messages", async () => {
+  const scamSamples = [
+    ["German", /Delivery \/ postal/, "Ihr Paket wurde im Verteilerzentrum angehalten. Verfolgen Sie Ihre Sendung hier: https://example.invalid/sendung"],
+    ["French", /Brand impersonation \/ fake charge/, "Votre achat de 594,98 EUR a été enregistré. Si vous n'avez pas initié ce paiement, contactez vite le service opposition."],
+    ["Dutch", /Account takeover \/ phishing/, "DigiD update: controle vereist. Controleer en bevestig uw gegevens via https://example.invalid/digid"],
+    ["Serbian", /Delivery \/ postal/, "Ваш пакет подлеже царинама. Посетите https://example.invalid/posta да пратите процедуру."],
+    ["English", /Account takeover \/ phishing/, "Your Apple ID is due to expire today. Confirm your Apple ID at https://example.invalid/apple"],
+  ];
+  const legitimateSamples = [
+    ["German", "Dein Paket ist angekommen. Ich bringe es dir morgen nach der Arbeit mit."],
+    ["French", "J'ai bien reçu ton colis, merci beaucoup pour le cadeau."],
+    ["Dutch", "Je pakket is aangekomen; ik neem het morgen mee naar kantoor."],
+    ["Bosnian", "Paket je stigao i nalazi se kod mene, donijet ću ga sutra."],
+    ["English", "Your order arrived today and the receipt is saved in your account history."],
+  ];
+
+  for (const [index, [language, category, message]] of scamSamples.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${index + 100}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.match(payload.riskLevel, /^(Medium|High)$/, language);
+    assert.equal(payload.analysis.detectedLanguage, language);
+    assert.match(payload.scamType, category);
+  }
+
+  for (const [index, [language, message]] of legitimateSamples.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `203.0.113.${index + 100}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "Low", language);
+  }
+});
+
 test("keeps ordinary multilingual messages low risk while identifying their language", async () => {
   const samples = [
     ["German", "Bitte bringen Sie die Unterlagen morgen zum vereinbarten Termin mit."],
@@ -785,6 +884,63 @@ test("keeps private URLs local and blocks sensitive external submissions", async
   assert.match((await credentialSubmit.json()).error, /token|credential/i);
 });
 
+test("sanitizes sensitive URL values unless exact external sharing is explicitly allowed", async () => {
+  const message = "Review https://example.com/reset?token=private-value&campaign=notice";
+  const privacySafe = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode: "deep", message }),
+  });
+  assert.equal(privacySafe.status, 200);
+  const safePayload = await privacySafe.json();
+  assert.equal(safePayload.privacy.sensitiveUrlDetected, true);
+  assert.equal(safePayload.privacy.sanitizedUrls, 1);
+  assert.equal(safePayload.privacy.fullSensitiveUrlsShared, 0);
+  assert.equal(safePayload.links[0].externalSharing.mode, "sanitized");
+  assert.doesNotMatch(safePayload.links[0].externalSharing.providerUrl, /private-value/);
+  assert.match(safePayload.links[0].externalSharing.providerUrl, /campaign=notice/);
+
+  const exact = await request("/api/scan", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode: "deep", message, sensitiveUrlConsent: true }),
+  });
+  assert.equal(exact.status, 200);
+  const exactPayload = await exact.json();
+  assert.equal(exactPayload.privacy.fullSensitiveUrlsShared, 1);
+  assert.equal(exactPayload.links[0].externalSharing.mode, "full-with-consent");
+  assert.match(exactPayload.links[0].externalSharing.providerUrl, /token=private-value/);
+});
+
+test("accepts a sensitive fresh VirusTotal submission only with both explicit consents", async () => {
+  const originalFetch = globalThis.fetch;
+  let submittedBody = "";
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input);
+    if (url === "https://www.virustotal.com/api/v3/urls") {
+      submittedBody = String(init.body ?? "");
+      return Response.json({ data: { id: "consented-sensitive-analysis" } });
+    }
+    return originalFetch(input, init);
+  };
+
+  try {
+    const response = await request("/api/deep/submit", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.44" },
+      body: JSON.stringify({
+        url: "https://example.com/reset?token=private-value",
+        consent: true,
+        sensitiveUrlConsent: true,
+      }),
+    }, { ...env, VIRUSTOTAL_API_KEY: "test-provider-secret" });
+    assert.equal(response.status, 200);
+    assert.match(submittedBody, /token%3Dprivate-value/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("requires a signed token before spending provider quota on status polling", async () => {
   const response = await request("/api/deep/status?id=known-analysis-id", {}, { ...env, VIRUSTOTAL_API_KEY: "test-provider-secret" });
   assert.equal(response.status, 403);
@@ -817,5 +973,44 @@ test("renders all transparency pages", async () => {
     assert.match(html, /info-orbit-inner/);
     assert.match(html, /info-toc/);
     assert.match(html, /aria-current="page"/);
+  }
+});
+
+test("detects current authority-reported scam campaigns without flagging similar everyday messages", async () => {
+  const scams = [
+    ["English", "USPS: Your package has unpaid postage. Update shipping preferences: https://example.invalid/usps"],
+    ["German", "Ihre pushTAN Registrierung läuft in 12 Stunden ab. Hier erneuern: https://example.invalid/tan"],
+    ["French", "Assurance Maladie : votre compte sera restreint. Confirmez vos informations: https://example.invalid/ameli"],
+    ["Dutch", "iDEAL: een overboeking van €2.850 is goedgekeurd. Herkent u deze niet? Bel direct 020-XXX-XXXX."],
+    ["Bosnian", "Pošta: dostava paketa nije uspjela zbog nepotpune adrese. Ažurirajte podatke: https://example.invalid/adresa"],
+  ];
+  const legitimate = [
+    ["English", "My USPS package arrived and I saved the delivery receipt."],
+    ["German", "Meine neue Handynummer ist jetzt im Familienchat gespeichert."],
+    ["French", "Mon compte Ameli fonctionne et aucun changement n'est demandé."],
+    ["Dutch", "De overboeking die ik zelf deed staat correct in mijn rekeningoverzicht."],
+    ["Bosnian", "Paket je stigao; adresa na potvrdi je ispravna."],
+  ];
+
+  for (const [index, [language, message]] of scams.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${index + 140}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.match(payload.riskLevel, /^(Medium|High)$/, language);
+  }
+
+  for (const [index, [language, message]] of legitimate.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `203.0.113.${index + 140}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "Low", language);
   }
 });

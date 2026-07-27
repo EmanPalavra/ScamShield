@@ -1,0 +1,206 @@
+/* Light theme */
+:root[data-theme="light"] {
+  --ink: #243f4d;
+  --ink-strong: #071f2c;
+  --muted: #496571;
+  --line: #bfd5de;
+  --line-strong: #9fbdc9;
+  --paper: #eaf2f7;
+  --surface: #f9fcff;
+  --surface-soft: #e1eff2;
+  --surface-raised: #ffffff;
+  --control: #f0f7fa;
+  --navy: #087861;
+  --navy-hover: #05614f;
+  --mint: #009b78;
+  --mint-soft: #d2f2e8;
+  --accent: #5364df;
+  --accent-soft: #e5e8ff;
+  --low: #05775d;
+  --low-soft: #d9f3e9;
+  --medium: #98600a;
+  --medium-soft: #ffedc9;
+  --high: #b62f45;
+  --high-soft: #fbdde3;
+  --shadow: 0 28px 72px rgba(25, 67, 86, 0.16);
+  --page-glow: rgba(0, 155, 120, 0.18);
+}
+
+:root[data-theme="light"] .brand-mark {
+  border-color: #087f69;
+  background: linear-gradient(150deg, #d5f6eb, #e7e9ff);
+  box-shadow: 0 9px 22px rgba(0, 155, 120, 0.2);
+}
+
+:root[data-theme="light"] .scan-option.active:first-child {
+  border-color: var(--mint);
+  box-shadow: 0 15px 34px rgba(0, 155, 120, 0.17);
+}
+
+:root[data-theme="light"] .scan-option.active:last-child {
+  border-color: var(--accent);
+  box-shadow: 0 15px 34px rgba(83, 100, 223, 0.17);
+}
+
+:root[data-theme="light"] .results {
+  border-color: rgba(74, 117, 139, 0.3);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.98), rgba(231, 242, 248, 0.97)),
+    var(--surface);
+  box-shadow: 0 34px 82px rgba(28, 67, 88, 0.18);
+}
+
+:root[data-theme="light"] .url-overview,
+:root[data-theme="light"] .analyst-panel {
+  background: linear-gradient(150deg, #ffffff, #edf7fa);
+}
+
+:root[data-theme="light"] .method-strip > div:nth-child(1) { background: linear-gradient(145deg, #f7fffc, #dff5ed); }
+:root[data-theme="light"] .method-strip > div:nth-child(2) { background: linear-gradient(145deg, #f8fbff, #e3f3fa); }
+:root[data-theme="light"] .method-strip > div:nth-child(3) { background: linear-gradient(145deg, #fafaff, #e7e9ff); }
+:root[data-theme="light"] .method-strip > div:nth-child(4) { background: linear-gradient(145deg, #fffdf8, #ffedca); }
+
+body {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.brand-name { font-size: 15px; }
+.site-header nav a { font-size: 14px; }
+.theme-toggle { font-size: 13px; }
+.eyebrow,
+.section-kicker { font-size: 12px; }
+.trust-row span,
+.hero-badge,
+.console-topline,
+.protection-status p { font-size: 12px; }
+.protection-status strong { font-size: 14px; }
+.scanner-heading > div > p,
+.risk-copy > p { font-size: 15px; }
+.privacy-chip { font-size: 12px; }
+.editor-card textarea { font-size: 16px; line-height: 1.65; }
+.button { font-size: 15px; }
+.view-switch button,
+.copy-button { font-size: 13px; }
+.risk-visual small { font-size: 12px; }
+.risk-pill { font-size: 11px; }
+.verdict-command span { font-size: 11px; }
+.verdict-command strong { font-size: 14px; }
+.result-metrics span { font-size: 11px; }
+.result-metrics small { font-size: 12px; }
+.coverage-warning { font-size: 13px; }
+.card-title p,
+.inspection-head p,
+.section-heading-row p { font-size: 11px; }
+.card-title h3,
+.inspection-head h3,
+.section-heading-row h3 { font-size: 18px; }
+.card-stat,
+.inspection-head > div > small { font-size: 11px; }
+.finding-list li > span { font-size: 11px; }
+.finding-list p,
+.action-list p { font-size: 14px; }
+.inspection-head > span,
+.section-heading-row > span { font-size: 10px; }
+.signal-state { font-size: 11px; }
+.signal-row strong,
+.compact-provider strong { font-size: 14px; }
+.signal-row p,
+.compact-provider p { font-size: 13px; }
+.signal-row > b { font-size: 12px; }
+.compact-provider small,
+.compact-provider > b { font-size: 10px; }
+.url-identity > span,
+.url-score span { font-size: 10px; }
+.url-identity > strong { font-size: 16px; }
+.url-identity > code { font-size: 12px; }
+.url-facts span { font-size: 11px; }
+.url-facts b { font-size: 12px; }
+.url-report ul { font-size: 13px; }
+.vt-inline span,
+.vt-inline b { font-size: 11px; }
+.analyst-tabs button { font-size: 13px; }
+.technical-summary span { font-size: 12px; }
+.technical-chips span { font-size: 11px; }
+.evidence-table p,
+.provider-card p,
+.url-card li,
+.ioc-grid p { font-size: 13px; }
+.provider-card > b,
+.impact { font-size: 10px; }
+.deep-heading p:last-child { font-size: 13px; }
+.external-badge { font-size: 10px; }
+.existing-report-grid span,
+.existing-report-grid small { font-size: 11px; }
+.existing-report-grid strong { font-size: 13px; }
+.privacy-warning p,
+.consent-check,
+.select-label { font-size: 13px; }
+.job-topline p { font-size: 10px; }
+.job-topline strong { font-size: 14px; }
+.job-topline > span { font-size: 12px; }
+.job-stages { font-size: 10px; }
+.job-message { font-size: 13px !important; }
+.vt-stats span { font-size: 10px; }
+.refresh-job { font-size: 12px; }
+.method-strip p,
+.site-footer { font-size: 13px; }
+
+@media (max-width: 520px) {
+  .brand-name { font-size: 12px; }
+  .site-header nav a { font-size: 13px; }
+  .finding-list p,
+  .action-list p,
+  .signal-row p,
+  .compact-provider p { font-size: 13px; }
+}
+
+/* Compact labels */
+.console-topline b { font-size: 10px; }
+.console-layers > div > span { font-size: 11px; }
+.console-layers strong { font-size: 13px; }
+.console-layers small { font-size: 11px; }
+.console-layers > div > b { font-size: 10px; }
+.privacy-chip strong { font-size: 12px; }
+.privacy-chip small { font-size: 11px; }
+.editor-toolbar label { font-size: 12px; }
+.editor-toolbar > span { font-size: 11px; }
+.field-footer { font-size: 12px; }
+.utility-actions { font-size: 12px; }
+.mode-title strong { font-size: 17px; }
+.mode-title em { font-size: 10px; }
+.mode-copy > small { font-size: 14px; }
+.mode-features b { font-size: 11px; }
+.progress-heading > b { font-size: 13px; }
+
+/* Scrollbars */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mint) var(--paper);
+}
+
+*::-webkit-scrollbar {
+  width: 13px;
+  height: 13px;
+}
+
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, var(--paper), var(--surface-soft));
+  border-left: 1px solid var(--line);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 54px;
+  border: 3px solid var(--paper);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--mint), var(--accent));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 16px color-mix(in srgb, var(--mint) 28%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--navy-hover), #8795ff);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--paper);
+}

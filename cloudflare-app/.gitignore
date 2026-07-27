@@ -42,3 +42,8 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Evaluation corpora can contain copyrighted or user-reported messages.
+/evaluation/data/raw/
+/evaluation/data/generated/
+/evaluation/results/

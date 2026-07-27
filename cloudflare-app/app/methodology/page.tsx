@@ -4,7 +4,7 @@ import { InfoShell } from "../info-shell";
 export const metadata: Metadata = { title: "Methodology" };
 
 const sections = [
-  { id: "rule-model", label: "Rule model" },
+  { id: "rule-model", label: "Local model" },
   { id: "signal-interaction", label: "Signal interaction" },
   { id: "provider-evidence", label: "Provider evidence" },
   { id: "risk-bands", label: "Risk bands" },
@@ -16,18 +16,19 @@ export default function MethodologyPage() {
       page="methodology"
       eyebrow="Detection methodology"
       title="A score built from visible evidence"
-      intro="ScamShield is an explainable triage system. It combines weighted language rules, passive URL forensics, and time-bounded reputation checks; the result is not an opaque AI probability."
+      intro="ScamShield is an explainable triage system. It combines weighted language rules, a small local statistical model, passive URL forensics, and time-bounded reputation checks."
       sections={sections}
     >
       <section id="rule-model">
-        <div className="info-number"><span>01</span><small>Rules</small></div>
+        <div className="info-number"><span>01</span><small>Local</small></div>
         <div className="info-section-copy">
           <span className="info-section-label">Deterministic analysis</span>
           <h2>Each warning has a traceable reason</h2>
-          <p>The message is normalized and evaluated against weighted patterns for phishing, fake charges, delivery fraud, crypto and investment schemes, advance-fee offers, job scams, marketplace payments, document phishing, and impersonation.</p>
+          <p>The message is normalized and evaluated against weighted patterns for known scam scenarios. A compact model trained on hashed wording patterns may raise a missed Low result to Medium, but it cannot suppress a rule alert or turn Medium into High.</p>
           <ul className="info-points">
             <li>Category rules identify the likely scam scenario.</li>
             <li>Signal rules measure urgency, credentials, payments, consequences, rewards, calls to action, and brand imitation.</li>
+            <li>The statistical model runs inside the Worker; message text is not sent to an AI provider.</li>
             <li>Formatting is supporting evidence; capital letters alone cannot create a high-risk verdict.</li>
           </ul>
         </div>
@@ -74,7 +75,7 @@ export default function MethodologyPage() {
         </div>
       </section>
 
-      <aside className="method-note"><span aria-hidden="true">!</span><div><strong>Validation status</strong><p>Regression examples confirm expected behavior across known scenarios, but they do not establish real-world accuracy. Publishing precision, recall, or F1 would require a larger, representative, locked holdout dataset.</p></div></aside>
+      <aside className="method-note"><span aria-hidden="true">!</span><div><strong>Validation status</strong><p>Locked external checks show a 9.33-point English smishing recall improvement, but almost no Portuguese improvement. Per-language precision and F1 still require larger representative holdouts.</p></div></aside>
     </InfoShell>
   );
 }
