@@ -1,0 +1,623 @@
+interface Rule {
+  type: string;
+  patterns: RegExp[];
+  weight: number;
+}
+
+export const categoryRules: Rule[] = [
+  {
+    type: "Brand impersonation / fake charge",
+    weight: 16,
+    patterns: [
+      /(?:apple|paypal|zelle|microsoft|amazon|netflix|icloud|google|\bbank\b|fedex|ups|dhl).{0,100}(?:account|payment|bill|charged|paid|support|transaction)/i,
+      /(?:bill|payment|transaction|purchase).{0,80}(?:\$\s?\d+|usd|declined|unauthori[sz]ed|dispute)/i,
+      /(?:charged|debited).{0,70}(?:card|account).{0,100}(?:did not|call|contact)|(?:card|account).{0,70}(?:charged|debited).{0,100}(?:did not|call|contact)/i,
+      /(?:card).{0,140}(?:used|purchase|transaction).{0,140}(?:if not you|did not).{0,100}(?:call|contact)|(?:transaction).{0,100}(?:not done by you|did not perform).{0,100}(?:link|call|contact)/i,
+      /dispute.{0,30}(?:call|contact).{0,20}\d{7,}/i,
+      /if you did not.{0,80}(?:call|click|change|contact)/i,
+      /(?:nalog|racun).{0,80}(?:naplacen|placen|transakcij|neovlasten)/i,
+      /(?:konto|cuenta|compte|rekening).{0,80}(?:zahlung|pago|paiement|betaling|transacci[oó]n|transaction)/i,
+      /(?:commande|achat|paiement).{0,100}(?:€|eur|débité|enregistré|validation).{0,120}(?:pas (?:initié|l['’]auteur)|appelez|contactez|opposition)/i,
+      /(?:saobraćajn\w*|саобраћајн\w*).{0,45}(?:prekršaj|kazn\w*|прекршај|казн\w*).{0,80}(?:plati|плати|din|дин)/i,
+      /(?:unpaid|outstanding).{0,35}(?:toll|road toll).{0,80}(?:pay|penalt|late fee|card)/i,
+      /(?:toll|road toll).{0,80}(?:unpaid|outstanding|pay immediately|additional penalt)/i,
+      /(?:outstanding road toll|unpaid toll)/i,
+      /(?:crit['’]?air|vignette).{0,100}(?:contravention|amende|réglementaire|régularis|conformité)/i,
+      /(?:offene forderung|ausstehend\w* betrag|mahnung).{0,100}(?:bezahlen|pfändung|zusätzliche kosten)/i,
+      /(?:buitenland|buitenlandse).{0,45}(?:ingelogd|inlogpoging).{0,100}(?:bel|was u dit niet|niet was)/i,
+      /(?:onbekende|vreemde).{0,35}(?:login|inlogpoging).{0,100}(?:bel|veiligheidsafdeling|saldo veilig)/i,
+      /(?:bel|veiligheidsafdeling).{0,70}(?:saldo|rekening).{0,30}(?:veilig|veilig te stellen)/i,
+      /(?:neplaćen\w*|neplacen\w*).{0,45}(?:putarin\w*|saobraćajn\w* kazn\w*).{0,80}(?:plati|uplat|izmir)/i,
+      /(?:paiement|transaction|achat).{0,100}(?:inhabituel|inconnu|non reconnu|sera prélevé).{0,100}(?:appelez|contactez|si vous ne)/i,
+      /(?:ideal|overboeking).{0,100}(?:goedgekeurd|bevestigd).{0,100}(?:herkent u niet|niet was|bel|contact)/i,
+    ],
+  },
+  {
+    type: "Account takeover / phishing",
+    weight: 15,
+    patterns: [
+      /(?:verify|confirm|validate|update|restore|unlock|secure)[^.!?\n]{0,50}(?:account|identity|login|password|payment information|details)/i,
+      /(?:account|cloud|storage|subscription).{0,90}(?:suspend|deactivat|locked|frozen|deleted|expire|full|on hold)/i,
+      /(?:bank(?:ing)?|bankofamerica|paytm|apple id|atm card|debit card).{0,120}(?:re-?activat|de-?activat|block|suspend|expire|unusual activity|verify|kyc)/i,
+      /(?:tax|government|gov\.uk|ukgov|covid).{0,100}(?:refund|payment|fine).{0,100}(?:claim|apply|visit|follow|link|tap)/i,
+      /(?:tax|government|gov\.uk|ukgov|covid).{0,100}(?:refund|payment|fine).{0,150}(?:https?:|(?:[a-z0-9-]+\.)+[a-z]{2,})/i,
+      /(?:transfer|refund|payment).{0,80}(?:government|tax).{0,100}(?:click|claim|apply|visit)/i,
+      /(?:fine|penalty).{0,100}(?:gov\.uk|government).{0,120}(?:visit|appeal|information)|(?:verity your login|verify your login).{0,100}(?:click|https?:)/i,
+      /(?:payment method|credit card|debit card).{0,50}(?:declined|failed|expired|update)/i,
+      /(?:action required|update payment information|sign in here)/i,
+      /(?:unusual|suspicious).{0,35}(?:login|activity|transaction)/i,
+      /password.{0,30}(?:expire|reset|change|confirm)/i,
+      /(?:nalog|racun).{0,60}(?:blokiran|zakljucan|zamrznut|deaktiviran)/i,
+      /potvrd(?:i|ite).{0,30}(?:nalog|identitet|lozink|uplatu)/i,
+      /(?:best[aä]tigen|verifizieren|actualizar|verificar|confirmer|v[ée]rifier|bevestigen|verifi[eë]ren).{0,55}(?:konto|cuenta|compte|rekening|passwort|contrase[nñ]a|mot de passe|wachtwoord)/i,
+      /(?:konto|cuenta|compte|rekening).{0,70}(?:gesperrt|bloquead|suspendu|bloqu[ée]|geblokkeerd|opgeschort)/i,
+      /(?:compte|rekening|digid|nalog|račun|рачун).{0,100}(?:authentification|contraint|controle vereist|actualis|blokiran|блокиран).{0,100}(?:vérifi|confirm|controle|gegevens|prijav|пријав)/i,
+      /(?:compte).{0,80}(?:contraint|nouvelle authentification)|(?:digid).{0,90}(?:controle vereist|bevestig|actualis|overname)/i,
+      /(?:netflix|pretplat\w*|претплат\w*).{0,80}(?:nije produžena|uplata je odbijena|није продужена|уплата.*одбијена).{0,80}(?:potvrd|prover|provjer|потврд|провер)/i,
+      /(?:tax refund|irs|state tax).{0,100}(?:approved|processed|ready to send).{0,100}(?:verify|confirm|social security|bank)/i,
+      /(?:pushtan|phototan|securego|online.banking|sicherheits-app).{0,100}(?:läuft ab|gesperrt|eingeschränkt|installieren|erneuern|bestätigen)/i,
+      /(?:konto|karte).{0,100}(?:seltsame|unregelmäßige|betrügerische).{0,50}(?:aktivität|transaktion).{0,80}(?:gesperrt|bestätigen|wiederherstellen)/i,
+      /(?:takmičenj\w*|natjecanj\w*|такмичењ\w*).{0,100}(?:glasaj|glasati|гласај|гласати).{0,100}(?:link|whatsapp|линк)/i,
+      /(?:glasaj|glasati|гласај|гласати).{0,80}(?:takmičenj\w*|natjecanj\w*|такмичењ\w*|whatsapp).{0,100}(?:link|prijav|potvrd|линк)/i,
+      /(?:glasanj\w*|гласањ\w*).{0,80}(?:prijav|potvrd|link|whatsapp|пријав|потврд|линк)/i,
+      /(?:finanzamt|einkommensteuer|steuerrückerstattung|rückerstattung).{0,100}(?:bestätigen|verifizieren|konto|link)/i,
+      /(?:buitenland|buitenlandse|onbekende|vreemde).{0,45}(?:ingelogd|inlogpoging|login).{0,100}(?:bel|niet|veilig)/i,
+      /(?:saldo veilig|veilig te stellen).{0,80}(?:bel|toegang|inlogcode|software)/i,
+      /(?:véhicule|certificat).{0,100}(?:conformité|sous peine|contravention|amende).{0,100}(?:lien|commander|régularis)/i,
+      /(?:assurance maladie|ameli|administration).{0,100}(?:compte|service).{0,80}(?:restreint|suspendu|bloqué).{0,80}(?:confirm|mettre à jour|informations)/i,
+    ],
+  },
+  {
+    type: "Delivery / postal scam",
+    weight: 13,
+    patterns: [
+      /(?:parcel|package|delivery|shipment|fedex|ups|dhl|usps).{0,120}(?:fee|address|failed|held|customs|reschedule|total due|payment|creditcard)/i,
+      /(?:usps|package|parcel).{0,120}(?:unpaid postage|missed delivery|shipping preferences|postage is unpaid)/i,
+      /(?:paket|posiljka|dostava).{0,100}(?:naknad|adres|zadrzan|carin|neuspjel|uplati)/i,
+      /(?:paket|sendung|paquete|env[ií]o|colis|livraison|pakket|bezorging).{0,100}(?:geb[uü]hr|adresse|direcci[oó]n|frais|adres|kosten|zahlung|pago|paiement|betaling)/i,
+      /(?:paket|sendung|lieferung).{0,120}(?:angehalten|steht (?:noch )?aus|verspät|zurückgeschickt|abholstelle|lieferproblem|unklare lieferadresse|fehlgeschlagene zustellung)/i,
+      /(?:paket).{0,120}(?:bestätigen).{0,60}(?:lieferung)|(?:lieferproblem).{0,100}(?:liefertermin|folgen sie dem link)/i,
+      /(?:colis|commande|livraison).{0,120}(?:boîte aux lettres|créneau|point relais|envoyé|expédiée|organisé|vérifier|recevoir)/i,
+      /(?:pakket|zending|levering).{0,140}(?:ontbrekende (?:gegevens|informatie)|vertraging|teruggestuurd|bezorgmoment|niet (?:gelukt|afleveren|vrijgegeven)|openstaand bedrag|douanekosten)/i,
+      /(?:ontbreekt|ontbrekende).{0,100}(?:pakket|zending|levering).{0,80}(?:bezorg|controle)|(?:pakket).{0,100}(?:af te leveren).{0,80}(?:niet gelukt|ontbrekende gegevens)/i,
+      /(?:pakket|bezorging).{0,120}(?:onjuiste|foutieve|verkeerde) postcode|(?:postcode).{0,100}(?:pakket|bezorging|afleveren|bijwerken)/i,
+      /(?:paket|pošiljk\w*|пакет|пошиљк\w*).{0,120}(?:zadržan|carin\w*|nije mogao biti isporučen|задржан|царин\w*|подлеже царинама)/i,
+      /(?:paket|pošiljk\w*|пакет|пошиљк\w*).{0,120}(?:nepotpun\w* adres\w*|ažurir\w* podatk\w*|potvrd\w* adres\w*|непотпун\w* адрес\w*)/i,
+      /(?:shipping|handling|insurance).{0,80}(?:fee|\$\s?\d+|total due)/i,
+      /customs.{0,25}(?:fee|charge|payment)/i,
+    ],
+  },
+  {
+    type: "Investment / crypto scam",
+    weight: 15,
+    patterns: [
+      /(?:crypto|bitcoin|btc|usdt|forex|trading).{0,100}(?:guaranteed|profit|return|signal|deposit|withdraw|bonus|casino)/i,
+      /(?:withdrawal|payout).{0,100}(?:deposit|fee|tax|unlock|frozen|review)/i,
+      /pay.{0,40}(?:\d+%|deposit).{0,100}(?:withdraw|release|receive)/i,
+      /(?:double|multiply).{0,20}(?:money|crypto|investment)/i,
+      /(?:signal prediction|buy \d+%|trading signal)/i,
+      /wallet.{0,35}(?:validation|synchronization|unlock|connect)/i,
+      /sigurn(?:a|i).{0,25}(?:zarada|profit|povrat)/i,
+      /(?:krypto|bitcoin|crypto|criptomoneda).{0,100}(?:garantiert|garantizado|garanti|gegarandeerd|gewinn|beneficio|rendement|winst)/i,
+    ],
+  },
+  {
+    type: "Prize / advance-fee scam",
+    weight: 14,
+    patterns: [
+      /(?:won|winner|prize|lottery|giveaway|reward|bonus|awarded|selected|chosen).{0,120}(?:claim|collect|register|withdraw|fee|promo code|pay|call|contact|send)/i,
+      /(?:claim|collect).{0,80}(?:prize|award|reward|cash|holiday|gift)/i,
+      /(?:call|contact).{0,100}(?:won|w0n|guaranteed).{0,80}(?:prize|award|cash)|(?:send).{0,100}(?:name|address|phone number).{0,80}(?:claim|prize|award)/i,
+      /(?:osvojili|dobitnik|nagrada|poklon|bonus).{0,100}(?:preuzm|preuzeli|preuzeti|registr|naknad|uplati|kod)/i,
+      /(?:mrbeast|celebrity|influencer).{0,100}(?:giveaway|bonus|crypto|casino)/i,
+      /(?:processing|release|administration).{0,20}fee/i,
+      /(?:inheritance|grant).{0,80}(?:fee|transfer|release)/i,
+      /(?:million|inheritance|bequest|beneficiary|charity).{0,120}(?:transfer|contact|payment|email)/i,
+      /(?:gewonnen|gewinner|premio|ganador|gagn[ée]|prix|winnaar|prijs).{0,100}(?:beanspruchen|reclamar|r[ée]clamer|claimen|geb[uü]hr|tarifa|frais|kosten)/i,
+    ],
+  },
+  {
+    type: "Job scam",
+    weight: 12,
+    patterns: [
+      /(?:remote|data entry|work from home|online).{0,120}(?:position|job|interview|hourly rate|earn|training)/i,
+      /(?:job|position|application|resume|creator).{0,150}(?:reply ["']?yes|onboard|interview|bonus|\$\s?\d+|meeting)/i,
+      /(?:onboarding|recruiting).{0,120}(?:creators?|candidate|platform|remote|bonus|joining)/i,
+      /(?:posao od kuce|udaljeni posao).{0,100}(?:zarad|dnevno|sedmicno|obuk|intervju)/i,
+      /pay.{0,80}(?:training|equipment).{0,100}(?:job|position)/i,
+      /(?:heimarbeit|trabajo desde casa|travail [àa] domicile|thuiswerk).{0,100}(?:verdienen|ganar|gagner|salaris|betaling)/i,
+    ],
+  },
+  {
+    type: "Tech support scam",
+    weight: 14,
+    patterns: [
+      /(?:computer|device).*(?:infected|virus|compromised)/i,
+      /(?:računar|uređaj).*(?:zaražen|virus|hakovan)/i,
+      /call (?:microsoft|support).*(?:immediately|now)/i,
+      /(?:computer|ordinateur|ordenador|computer).{0,80}(?:virus|infiziert|infect[ée]|infectado|besmet|gehackt)/i,
+    ],
+  },
+  {
+    type: "Marketplace / payment scam",
+    weight: 15,
+    patterns: [
+      /(?:zelle|paypal|cash app|venmo).{0,100}(?:paid you|account on hold|business account|credit your funds|above your limit)/i,
+      /(?:account on hold|unable to credit|upgrade.{0,30}business).{0,100}(?:pay|refund|send|funds)/i,
+      /(?:pay half|deposit).{0,80}(?:take.{0,30}(?:post|listing).{0,20}down|mark.{0,15}sold)/i,
+      /(?:apple|google|steam|amazon).{0,20}gift card/i,
+      /(?:pre-owned|used item).{0,100}(?:visit|online store|pay|shipping)/i,
+      /(?:pre-owned|used item).{0,180}(?:online store).{0,140}(?:customer service|more details|specifications)/i,
+      /(?:geschenkkarte|tarjeta de regalo|carte cadeau|cadeaukaart).{0,60}(?:kaufen|comprar|acheter|kopen|code)/i,
+    ],
+  },
+  {
+    type: "Check / mobile-deposit scam",
+    weight: 17,
+    patterns: [
+      /(?:pay|payment|full payment).{0,100}(?:by check|with a check)/i,
+      /(?:pictures?|photos?).{0,70}(?:front and back).{0,90}(?:check|deposit)/i,
+      /(?:mobile deposit|mobile banking app).{0,100}(?:check|deposit|funds)/i,
+      /(?:check|cheque).{0,120}(?:overpayment|extra amount|send back|refund|difference)/i,
+    ],
+  },
+  {
+    type: "Identity / verification phishing",
+    weight: 17,
+    patterns: [
+      /(?:pre-employment|employment|candidate).{0,100}(?:verification|screening).{0,160}(?:photo id|passport|national id|proof of address)/i,
+      /(?:government-issued|government issued|photo id|passport|national id).{0,100}(?:proof of address|bank statement|utility bill)/i,
+      /(?:complete|submit).{0,50}(?:verification|identity review).{0,100}(?:within \d+ hours?|application active|removed from consideration)/i,
+      /(?:account requires verification|submit appeal).{0,100}(?:account restriction|within \d+ hours?)/i,
+    ],
+  },
+  {
+    type: "Gift-card impersonation scam",
+    weight: 17,
+    patterns: [
+      /(?:surprise|confidential|keep this).{0,140}(?:gift card|store card|voucher).{0,100}(?:reimburse|buy|get|purchase)/i,
+      /(?:boss|manager|ceo|team members?).{0,140}(?:gift card|store card|voucher)/i,
+      /(?:buy|get|purchase).{0,50}(?:apple|google|steam|amazon)?\s*(?:gift card|store card|voucher).{0,80}(?:code|reimburse|now)/i,
+    ],
+  },
+  {
+    type: "Verification-code theft",
+    weight: 18,
+    patterns: [
+      /(?:send|tell|share).{0,35}(?:me )?(?:the |your )?(?:verification|unlock|security|one[- ]time)?\s*code/i,
+      /(?:unlock|verification|security|one[- ]time).{0,25}code.{0,80}(?:someone|another phone|expires?|fast)/i,
+      /(?:code|otp).{0,50}(?:expires?|valid).{0,30}(?:seconds?|minutes?)/i,
+    ],
+  },
+  {
+    type: "Renewal / subscription phishing",
+    weight: 14,
+    patterns: [
+      /(?:enrollment|subscription|membership|registration).{0,80}(?:expired|expire soon|unregistered)/i,
+      /(?:records indicate|friendly reminder).{0,120}(?:expired|renew).{0,160}(?:visit|link|update)/i,
+      /(?:renew|reactivate).{0,80}(?:microchip|subscription|membership|registration)/i,
+    ],
+  },
+  {
+    type: "Document / SMS phishing",
+    weight: 13,
+    patterns: [
+      /(?:document|invoice|voicemail|review|notice).{0,80}(?:awaiting|pending|access|open|view)/i,
+      /(?:periodic review|no action required).{0,120}(?:https?:\/\/|www\.|reply stop)/i,
+      /(?:reply stop|opt[- ]out).{0,120}(?:https?:\/\/|www\.)/i,
+      /(?:access|open|view).{0,30}(?:document|invoice|message).{0,50}(?:here|link)/i,
+    ],
+  },
+  {
+    type: "Romance / impersonation scam",
+    weight: 11,
+    patterns: [
+      /(?:deployed|offshore|abroad).*(?:money|gift card|transfer)/i,
+      /(?:hitno|urgentno).*(?:pošalji|uplati).*(?:novac|kartic)/i,
+      /pretend(?:ing)? to be/i,
+      /(?:hallo\s+(?:mama|papa)|mama|papa).{0,100}(?:neue (?:handy)?nummer|handy ist kaputt|rechnung.{0,30}überweisen)/i,
+      /(?:mama|tata|ćao|zdravo).{0,100}(?:novog broja|izgubio sam telefon|uplati.{0,30}dopunu)/i,
+    ],
+  },
+  {
+    type: "Brand impersonation / fake charge",
+    weight: 16,
+    patterns: [
+      /(?:abbuchung|rechnung|transaktion).{0,80}(?:nicht autorisiert|unbekannt|stornieren|widersprechen)/i,
+      /(?:cargo|factura|transacci[oó]n).{0,80}(?:no autorizad|desconocid|cancelar|reclamar)/i,
+      /(?:d[eé]bit|facture|transaction).{0,80}(?:non autoris[eé]|inconnu|annuler|contester)/i,
+      /(?:afschrijving|factuur|transactie).{0,80}(?:niet geautoriseerd|onbekend|annuleren|betwisten)/i,
+      /(?:tere[cć]enje|ra[cč]un|transakcij).{0,80}(?:neovla[sš]ten|nepoznat|otka[zž]|ospor)/i,
+    ],
+  },
+  {
+    type: "Account takeover / phishing",
+    weight: 15,
+    patterns: [
+      /(?:anmeldedaten|credenciales|identifiants|inloggegevens|podaci za prijavu).{0,55}(?:best[aä]tigen|verificar|confirmer|bevestigen|potvrditi|proveriti)/i,
+      /(?:sicherheitswarnung|alerta de seguridad|alerte de s[eé]curit[eé]|beveiligingswaarschuwing|sigurnosno upozorenje|bezbednosno upozorenje).{0,80}(?:konto|cuenta|compte|rekening|ra[cč]un|nalog)/i,
+    ],
+  },
+  {
+    type: "Delivery / postal scam",
+    weight: 13,
+    patterns: [
+      /(?:zustellung|entrega|livraison|bezorging|isporuka).{0,90}(?:fehlgeschlagen|fallad[oa]|[eé]chou[eé]e|mislukt|neuspjel|neuspel)/i,
+      /(?:zoll|aduana|douane|carina).{0,45}(?:geb[uü]hr|tarifa|frais|kosten|naknad|uplata)/i,
+    ],
+  },
+  {
+    type: "Investment / crypto scam",
+    weight: 15,
+    patterns: [
+      /(?:auszahlung|retiro|retrait|opname|isplata).{0,100}(?:geb[uü]hr|tarifa|frais|kosten|naknad|porez|steuer|impuesto|belasting)/i,
+      /(?:investition|inversi[oó]n|investissement|investering|ulaganje).{0,80}(?:garantiert|garantizad|garanti|gegarandeerd|zagarantovan|bez rizika)/i,
+    ],
+  },
+  {
+    type: "Prize / advance-fee scam",
+    weight: 14,
+    patterns: [
+      /(?:lotterie|loter[ií]a|loterie|loterij|lutrija).{0,90}(?:gewonnen|ganad|gagn[eé]|dobit|osvoj)/i,
+      /(?:bearbeitungsgeb[uü]hr|gastos de tramitaci[oó]n|frais de dossier|administratiekosten|tro[sš]kovi obrade).{0,70}(?:preis|premio|prix|prijs|nagrad|dobit)/i,
+    ],
+  },
+  {
+    type: "Job scam",
+    weight: 12,
+    patterns: [
+      /(?:stellenangebot|oferta de trabajo|offre d['’]emploi|vacature|ponuda za posao).{0,120}(?:vorauszahlung|pago previo|paiement anticip[eé]|vooraf betalen|uplati unaprijed|uplati unapred)/i,
+      /(?:telegram|whatsapp).{0,80}(?:interview|vorstellungsgespr[aä]ch|entrevista|entretien|sollicitatie|razgovor za posao)/i,
+    ],
+  },
+  {
+    type: "Tech support scam",
+    weight: 14,
+    patterns: [
+      /(?:rufen sie|llame|appelez|bel).{0,30}(?:microsoft|support|soporte|assistance|helpdesk).{0,35}(?:sofort|ahora|imm[eé]diatement|meteen)/i,
+      /(?:instalirajte|instaliraj).{0,30}(?:anydesk|teamviewer|udaljeni pristup|daljinski pristup)/i,
+    ],
+  },
+  {
+    type: "Marketplace / payment scam",
+    weight: 15,
+    patterns: [
+      /(?:verk[aä]ufer|vendedor|vendeur|verkoper|prodava[cč]).{0,100}(?:kurier|mensajero|coursier|koerier|dostav)/i,
+      /(?:zahlung erhalten|pago recibido|paiement re[cç]u|betaling ontvangen|uplata primljena).{0,100}(?:konto aktualisieren|actualizar la cuenta|mettre [àa] jour le compte|rekening upgraden|nadograditi ra[cč]un)/i,
+    ],
+  },
+  {
+    type: "Document / SMS phishing",
+    weight: 13,
+    patterns: [
+      /(?:dokument|rechnung|factura|document|facture|bericht|poruka).{0,80}(?:ausstehend|pendiente|en attente|klaarstaat|na [cč]ekanju)/i,
+      /(?:[oö]ffnen sie|abra|ouvrez|open|otvorite).{0,35}(?:dokument|rechnung|factura|document|facture|bericht|poruku).{0,50}(?:link|enlace|lien|poveznic)/i,
+    ],
+  },
+  {
+    type: "Romance / impersonation scam",
+    weight: 11,
+    patterns: [
+      /(?:im ausland|en el extranjero|[àa] l['’][eé]tranger|in het buitenland|u inostranstvu).{0,100}(?:geld|dinero|argent|novac|[uü]berweisung|transferencia|virement|overschrijving|uplata)/i,
+      /(?:liebling|cari[nñ]o|mon amour|schat|draga|dragi).{0,120}(?:geschenkkarte|tarjeta de regalo|carte cadeau|cadeaukaart|poklon kartic|novac)/i,
+    ],
+  },
+];
+
+export const urgencyPatterns = [
+  /urgent(?:ly)?/i,
+  /immediately/i,
+  /within (?:\d+ )?(?:minutes?|hours?)/i,
+  /act now/i,
+  /hitno/i,
+  /odmah/i,
+  /u roku od/i,
+  /zadnja opomena/i,
+  /within \d+ days?/i,
+  /within \d+ hours?/i,
+  /today/i,
+  /right now/i,
+  /\bnow\b/i,
+  /don['’]t miss/i,
+  /last chance/i,
+  /expires? after \d+ (?:seconds?|minutes?)/i,
+  /send (?:it|the code) fast/i,
+  /will be (?:deleted|frozen|suspended|closed)/i,
+  /(?:dringend|sofort|unverz[uü]glich|innerhalb von \d+ (?:minuten|stunden))/i,
+  /(?:urgente|inmediatamente|ahora mismo|dentro de \d+ (?:minutos|horas))/i,
+  /(?:urgent|imm[ée]diatement|sans d[ée]lai|dans les \d+ (?:minutes|heures))/i,
+  /(?:dringend|onmiddellijk|meteen|binnen \d+ (?:minuten|uur))/i,
+  /(?:hitno|odmah|smjesta|smesta|u roku od \d+ (?:minuta|sati))/i,
+];
+
+export const credentialPatterns = [
+  /password/i,
+  /passcode/i,
+  /verification code/i,
+  /one[- ]time code/i,
+  /login/i,
+  /lozink/i,
+  /kod za potvrdu/i,
+  /prijav/i,
+  /bank details/i,
+  /payment information/i,
+  /(?:einmalcode|einmalpasswort|zugangscode)/i,
+  /(?:c[oó]digo de un solo uso|c[oó]digo de acceso)/i,
+  /(?:code [àa] usage unique|code d['’]acc[eè]s)/i,
+  /(?:eenmalige code|toegangscode)/i,
+  /(?:jednokratni kod|pristupni podaci|podaci za prijavu)/i,
+  /card (?:number|details|information)/i,
+  /security (?:code|question)/i,
+  /social security/i,
+  /(?:unlock|verification|security).{0,20}code/i,
+  /(?:send|share|tell).{0,25}(?:me )?(?:the |your )?(?:code|otp)/i,
+  /(?:government-issued|government issued|photo id|passport|national id|proof of address)/i,
+  /(?:passwort|kennwort|anmeldedaten|sicherheitscode|tan[- ]?code)/i,
+  /(?:contrase[nñ]a|credenciales|inicio de sesi[oó]n|c[oó]digo de verificaci[oó]n)/i,
+  /(?:mot de passe|identifiants|connexion|code de v[ée]rification)/i,
+  /(?:wachtwoord|inloggegevens|aanmelden|verificatiecode)/i,
+  /(?:lozinka|lozinku|podaci za prijavu|verifikacijski kod|sigurnosni kod)/i,
+];
+
+export const credentialRequestPatterns = [
+  /(?:send|share|tell|provide|enter|submit|type|confirm|verify|update).{0,45}(?:your\s+)?(?:password|passcode|verification code|one[- ]time code|otp|login details|bank details|card (?:number|details)|security code)/i,
+  /(?:password|passcode|verification code|one[- ]time code|otp|login details|bank details|security code).{0,45}(?:send|share|provide|reply|message|tell)/i,
+  /(?:upload|send|submit|provide).{0,45}(?:government-issued|government issued|photo id|passport|national id|proof of address)/i,
+  /(?:senden|teilen|eingeben|best[aä]tigen|verifizieren|aktualisieren).{0,45}(?:passwort|kennwort|anmeldedaten|sicherheitscode|tan[- ]?code)/i,
+  /(?:enviar|compartir|introducir|confirmar|verificar|actualizar).{0,45}(?:contraseña|credenciales|código de verificación|código de acceso)/i,
+  /(?:envoy(?:ez|er)|partag(?:ez|er)|saisir|confirm(?:ez|er)|v(?:é|e|Ã©)rifi(?:ez|er|e)|mettre (?:à|a|Ã ) jour).{0,45}(?:mot de passe|identifiants|code de v(?:é|e|Ã©)rification|code d['’]acc(?:è|e|Ã¨)s)/i,
+  /(?:stuur|deel|voer|bevestig|verifieer|werk bij).{0,45}(?:wachtwoord|inloggegevens|verificatiecode|toegangscode)/i,
+  /(?:pošalji|podijeli|podeli|unesi|potvrdi|provjeri|proveri|ažuriraj).{0,45}(?:lozink|zapork|podatke za prijavu|verifikacijski kod|sigurnosni kod|bezbednosni kod|jednokratni kod)/i,
+];
+
+export const routineAccountNoticePatterns = [
+  /(?:an account|your account).{0,35}(?:has been|was|is now).{0,20}(?:created|set up|activated)/i,
+  /(?:you can|use the following details to).{0,30}(?:log in|sign in|access)/i,
+  /(?:set|create|choose).{0,25}(?:your )?password.{0,30}(?:for the first time|first login|before your first login)/i,
+  /(?:this (?:message|email) was|automatically).{0,25}(?:generated|sent)/i,
+  /(?:contact|reach).{0,40}(?:support|administrator|clinic|practice).{0,35}(?:questions|help|assistance)/i,
+  /(?:konto|account).{0,35}(?:wurde|is).{0,20}(?:erstellt|aangemaakt)/i,
+  /(?:cuenta|compte).{0,35}(?:ha sido|a été).{0,20}(?:creada|créé)/i,
+  /(?:passwort|wachtwoord|contraseña|mot de passe).{0,35}(?:erstmals|eerste keer|primera vez|première fois)/i,
+  /(?:nalog|račun).{0,35}(?:je|vam je).{0,20}(?:kreiran|otvoren|aktiviran)/i,
+  /(?:automatisch generiert|automatisch gegenereerd|generado automáticamente|généré automatiquement|automatski generisana|automatski generirana)/i,
+];
+
+export const paymentPatterns = [
+  /gift card/i,
+  /wire transfer/i,
+  /bank transfer/i,
+  /crypto(?:currency)?/i,
+  /bitcoin/i,
+  /uplati/i,
+  /novac/i,
+  /naknad/i,
+  /kartic/i,
+  /\busd\b/i,
+  /\busdt\b/i,
+  /total due/i,
+  /\bdeposit\b/i,
+  /payment method/i,
+  /withdrawal/i,
+  /(?:geld senden|dinero enviar|envoyer de l['’]argent|geld sturen|po[sš]alji novac)/i,
+  /(?:überweisen|überweise|überweist).{0,60}(?:rechnung|geld|betrag)|(?:rechnung|geld|betrag).{0,60}(?:überweisen|überweise|überweist)/i,
+  /(?:bearbeitungsgeb[uü]hr|tarifa de tramitaci[oó]n|frais de traitement|verwerkingskosten|naknada za obradu)/i,
+  /(?:€|\beur\b).{0,35}(?:débité|paiement|commande|achat)|(?:débité|paiement|commande|achat).{0,35}(?:€|\beur\b)/i,
+  /(?:openstaand bedrag|automatische incasso|douanekosten|invoerrechten)/i,
+  /(?:overboeking|overschrijving).{0,50}(?:€|eur|duizend|goedgekeurd|bevestigd)/i,
+  /(?:\bdin\b|динара|carinjenje|kazn\w*|uplata je odbijena|платите)/i,
+  /(?:unpaid|outstanding).{0,35}(?:toll|fine)|(?:toll|fine).{0,35}(?:pay|paid|payment|owe)/i,
+  /(?:putarin\w*|kazn\w*).{0,45}(?:plati|uplat|izmir|dug)/i,
+  /(?:offene forderung|ausstehend\w* betrag).{0,60}(?:bezahlen|zahlung)/i,
+  /hourly rate/i,
+  /(?:[uü]berweisung|geschenkkarte|gutschein|zahlung|kryptow[aä]hrung)/i,
+  /(?:transferencia|tarjeta de regalo|pago|dep[oó]sito|criptomoneda)/i,
+  /(?:virement|carte cadeau|paiement|d[ée]p[oô]t|cryptomonnaie)/i,
+  /(?:overschrijving|cadeaukaart|betaling|storting|cryptovaluta)/i,
+  /(?:bankovna uplata|poklon kartica|darovna kartica|kripto valuta|depozit)/i,
+  /(?:mobile deposit|mobile banking app|paying by check|payment by check)/i,
+  /(?:voucher|store card)/i,
+];
+
+export const consequencePatterns = [
+  /suspend(?:ed|ing|sion)?/i,
+  /deactivat(?:e|ed|ion)/i,
+  /locked/i,
+  /frozen/i,
+  /deleted/i,
+  /account on hold/i,
+  /(?:konto|cuenta|compte|rekening|ra[cč]un|nalog).{0,45}(?:abl[aä]uft|caducar[aá]|expirera|verloopt|isti[cč]e)/i,
+  /unable to credit/i,
+  /payment.{0,25}(?:failed|declined)/i,
+  /(?:re-?activat|prevent loss of services)/i,
+  /data.{0,30}(?:lost|deleted|removed)/i,
+  /(?:blokiran|zakljucan|zamrznut|obrisan)/i,
+  /(?:gesperrt|deaktiviert|eingefroren|gel[oö]scht)/i,
+  /(?:bloquead[oa]|suspendid[oa]|desactivad[oa]|eliminad[oa])/i,
+  /(?:bloqu[ée]|suspendu|d[ée]sactiv[ée]|supprim[ée])/i,
+  /(?:geblokkeerd|opgeschort|gedeactiveerd|verwijderd)/i,
+  /(?:zaklju[cč]an|zamrznut|deaktiviran|obrisan)/i,
+  /(?:zurückgeschickt|fehlgeschlagene zustellung|nicht zugestellt)/i,
+  /(?:compte est contraint|seront débités|paiement.{0,25}en cours)/i,
+  /(?:teruggestuurd|niet vrijgegeven|niet bezorgen|niet afleveren)/i,
+  /(?:uplata je odbijena|nije produžena|није плаћена|није продужена|привремено блокиран)/i,
+  /(?:pushtan|phototan|securego|registrierung).{0,70}(?:läuft ab|endet|abgelaufen|gesperrt|eingeschränkt)/i,
+  /(?:sperrung|blockierung).{0,50}(?:konto|karte|app)|(?:konto|karte|app).{0,50}(?:sperrung|blockierung)/i,
+  /(?:additional|late).{0,20}(?:penalt|fee)|(?:avoid|prevent).{0,35}(?:penalt|fine)/i,
+  /(?:sous peine).{0,35}(?:contravention|amende)|(?:éviter).{0,35}(?:contravention|amende)/i,
+  /(?:pfändung|gerichtsvollzieher|zusätzliche kosten).{0,60}(?:vermeiden|bezahlen|sofort)/i,
+  /(?:dodatn\w* troškov\w*|додатн\w* трошков\w*).{0,50}(?:izbjeg|izbeg|плат)/i,
+];
+
+export const rewardPatterns = [
+  /\bbonus\b/i,
+  /giveaway/i,
+  /\bprize\b/i,
+  /\breward\b/i,
+  /guaranteed.{0,20}(?:profit|return|income)/i,
+  /earn.{0,20}(?:daily|weekly|per day|\$\s?\d+)/i,
+  /paid you/i,
+  /(?:garantierter gewinn|beneficio garantizado|b[eé]n[eé]fice garanti|gegarandeerde winst|zagarantovana zarada|zajam[cč]ena zarada)/i,
+  /receive.{0,20}\$\s?\d+/i,
+  /(?:nagrada|poklon|zarad)/i,
+  /(?:gewinn|gewonnen|belohnung|garantierte rendite)/i,
+  /(?:premio|ganador|recompensa|rentabilidad garantizada)/i,
+  /(?:prix|gagnant|r[ée]compense|rendement garanti)/i,
+  /(?:prijs|winnaar|beloning|gegarandeerd rendement)/i,
+  /(?:dobitnik|osvojili|zagarantovana zarada|zajam[cč]ena zarada)/i,
+];
+
+export const callToActionPatterns = [
+  /(?:click|visit|access|open|view).{0,30}(?:here|link|site|page|document)/i,
+  /(?:follow|tap|log in|sign in|reactivate|re-activate).{0,35}(?:here|link|steps?|account|banking)|(?:claim|collect).{0,45}(?:refund|payment|prize|award|cash|holiday)/i,
+  /(?:confirm|verify|update).{0,40}(?:apple id|iphone id|kyc)|(?:complete).{0,35}(?:kyc|verification)/i,
+  /(?:paytm office ph|customer care).{0,25}\d{7,}|(?:tap|follow).{0,30}(?:https?:|(?:[a-z0-9-]+\.)+[a-z]{2,})/i,
+  /(?:tax|emergency).{0,80}(?:refund).{0,100}(?:https?:|(?:[a-z0-9-]+\.)+[a-z]{2,})/i,
+  /(?:update|confirm|verify|enter|submit).{0,35}(?:details|information|account|payment|password|code)/i,
+  /(?:update|fix).{0,45}(?:shipping preferences|delivery|postage|package problem)/i,
+  /(?:reply|respond).{0,25}(?:yes|stop|confirm|link)/i,
+  /(?:call|contact|text|dial|telephone).{0,80}\d{7,}/i,
+  /(?:settle|pay).{0,35}(?:balance|toll|today)|(?:toll).{0,35}(?:paid today|settle)/i,
+  /(?:bel|bellen).{0,80}(?:als u dit niet|was u dit niet|niet was|saldo veilig)/i,
+  /(?:herkent u).{0,50}(?:niet).{0,50}(?:bel|contact)|(?:bel|contact).{0,60}(?:als u|indien u).{0,30}(?:niet)/i,
+  /(?:register|sign up|schedule|book).{0,35}(?:now|here|meeting|account)/i,
+  /(?:pay|send|transfer|buy).{0,40}(?:fee|deposit|gift card|crypto|money|half|\$\s?\d+)/i,
+  /(?:make|complete).{0,30}(?:mobile deposit|deposit).{0,60}(?:banking app|check)/i,
+  /(?:send|share|tell).{0,30}(?:me )?(?:the |your )?(?:code|otp)/i,
+  /(?:complete|submit).{0,35}(?:pre-employment verification|identity review|appeal)/i,
+  /(?:klicken|[oö]ffnen|best[aä]tigen|bezahlen|senden).{0,45}(?:link|konto|daten|geb[uü]hr|code|zahlung)/i,
+  /(?:aktualisieren|bestätigen|verfolgen|folgen|abholen).{0,55}(?:adresse|angaben|sendung|lieferung|link|hier)|(?:hier).{0,30}(?:abholen|bestätigen)/i,
+  /(?:erneuern|installieren|bezahlen|bestätigen).{0,60}(?:hier|app|konto|link|rückerstattung|betrag)|(?:hier).{0,30}(?:erneuern|installieren|bezahlen)/i,
+  /(?:speichere|schreib).{0,45}(?:nummer|whatsapp)/i,
+  /(?:haga clic|abrir|confirmar|verificar|pagar|enviar).{0,45}(?:enlace|cuenta|datos|tarifa|c[oó]digo|pago)/i,
+  /(?:cliquez|ouvrir|confirmer|v[ée]rifier|payer|envoyer).{0,45}(?:lien|compte|donn[ée]es|frais|code|paiement)/i,
+  /(?:veuillez|merci de).{0,30}(?:choisir|vérifier|cliquer|contacter|appeler|confirmer)|(?:appelez|contactez).{0,45}(?:service|opposition|sécurité|\d)/i,
+  /(?:confirmez|mettez à jour).{0,60}(?:informations|données|compte)|(?:si vous ne).{0,60}(?:appelez|contactez)/i,
+  /(?:récupérez|commandez|régularisez|suivez).{0,60}(?:vignette|certificat|lien|situation|via|https?:)/i,
+  /(?:klik|open|bevestig|verifieer|betaal|stuur).{0,45}(?:link|rekening|gegevens|kosten|code|betaling)/i,
+  /(?:controleer|bevestig|bekijk|kies|actualiseer|actualiseren|werk bij|los dit|stel).{0,55}(?:gegevens|status|zending|bezorgmoment|incasso|portaal|bij)|(?:voer).{0,30}(?:betaling|gegevens)|klik hier/i,
+  /(?:klikni|otvori|potvrdi|provjeri|proveri|uplati|po[sš]alji).{0,45}(?:link|nalog|ra[cč]un|podatke|naknadu|kod|uplatu)/i,
+  /(?:ažuriraj|ažurirajte|potvrdi|potvrdite).{0,60}(?:adres\w*|podatk\w*|isporuk\w*)/i,
+  /(?:glasaj|glasati|podrži|подржи|гласај).{0,60}(?:link|takmičenj\w*|natjecanj\w*|whatsapp|prijav)/i,
+  /(?:kliknite|platite|posjetite|posetite|potvrdite|provjerite|proverite|prijavite).{0,60}(?:link|kazn\w*|podatk\w*|kartic\w*|ovde|ovdje|paket)/i,
+  /(?:javite se|javi se|pozovi me).{0,45}(?:broj|preuzeli|preuzeti)|uplati.{0,45}(?:dopunu|kredit)/i,
+  /(?:кликните|платите|посетите|потврдите|проверите|пријавите).{0,60}(?:линк|казн\w*|податк\w*|картиц\w*|пакет|https?:\/\/)/i,
+];
+
+export const impersonationPatterns = [
+  /(?:apple|paypal|zelle|microsoft|amazon|netflix|icloud|google|fedex|ups|dhl) (?:account|support|team|payment|security)/i,
+  /copyright.{0,50}(?:apple|microsoft|google|amazon)/i,
+  /(?:banka|po[sš]ta|policija|porezna uprava).{0,60}(?:nalog|ra[cč]un|uplata|kazna|potvrda)/i,
+  /(?:dhl|deutsche post|fedex|digid|crédit agricole|apple store).{0,100}(?:paket|sendung|pakket|compte|paiement|gegevens)/i,
+  /(?:irs|tax office|toll services|finanzamt|bitvavo|crit['’]?air|putevi srbije).{0,100}(?:refund|toll|konto|betrag|inlog|vignette|putarin|kazn)/i,
+  /(?:banka|pošta|netflix|банка|пошта).{0,80}(?:nalog|račun|uplata|pretplat|paket|налог|рачун|уплата|претплат|пакет)/i,
+  /(?:hallo\s+(?:mama|papa)|mama|papa).{0,100}(?:neue (?:handy)?nummer|handy ist kaputt)/i,
+  /(?:mama|tata|ćao|zdravo).{0,100}(?:novog broja|izgubio sam telefon)/i,
+];
+
+export const secrecyPatterns = [
+  /(?:do not|don['’]t|never).{0,35}(?:tell|contact|call|inform|share).{0,35}(?:bank|family|police|employer|anyone)/i,
+  /(?:keep|this is).{0,25}(?:secret|confidential|between us)/i,
+  /(?:move|continue|contact me).{0,40}(?:whatsapp|telegram|signal app|private chat)/i,
+  /(?:surprise|keep this between us).{0,120}(?:gift card|store card|voucher|reimburse)/i,
+  /(?:ne govori|nemoj re[cć]i|ne kontaktiraj).{0,35}(?:banci|policiji|porodici|nikome)/i,
+  /(?:nicht weitersagen|geheim halten|no se lo diga|mant[eé]ngalo en secreto|ne le dites pas|gardez.*secret|vertel het niemand|houd.*geheim)/i,
+];
+
+export const authorityPatterns = [
+  /(?:ceo|director|manager|boss|police|tax office|irs|court|government).{0,90}(?:urgent|transfer|payment|gift card|confidential|warrant|arrest)/i,
+  /(?:i am|this is|speaking on behalf of).{0,45}(?:your boss|the ceo|the bank|the police|support|security team)/i,
+  /(?:policija|sud|porezna|direktor|šef|sef).{0,80}(?:hitno|uplati|transfer|kazna|uhap|povjerljivo)/i,
+  /(?:gesch[aä]ftsf[uü]hrer|direktor|polizei|finanzamt).{0,80}(?:dringend|zahlung|[uü]berweisung|vertraulich)/i,
+  /(?:director|polic[ií]a|agencia tributaria).{0,80}(?:urgente|pago|transferencia|confidencial)/i,
+  /(?:directeur|police|imp[oô]ts).{0,80}(?:urgent|paiement|virement|confidentiel)/i,
+  /(?:directeur|politie|belastingdienst).{0,80}(?:dringend|betaling|overschrijving|vertrouwelijk)/i,
+];
+
+export const evasionPatterns = [
+  /\b(?:p[\s._-]+a[\s._-]+s[\s._-]+s[\s._-]+w[\s._-]+o[\s._-]+r[\s._-]+d|l[\s._-]+o[\s._-]+g[\s._-]+i[\s._-]+n)\b/i,
+  /\b(?:b[1!]tcoin|bit\(oin|cr¥pt[0o]|crypt0|g[1!]ft[\s._-]+card|pa¥pal|paypa1)\b/i,
+  /[\u200B-\u200D\u2060\uFEFF]/,
+];
+
+export const benignContextPatterns = [
+  /(?:security awareness|training example|phishing simulation|scam example|educational example)/i,
+  /(?:do not click|do not reply|never share).{0,80}(?:suspicious|scam|phishing|unknown)/i,
+  /(?:reported|marked|identified).{0,30}(?:as )?(?:a )?(?:scam|phishing)/i,
+];
+
+export const languageProfiles = [
+  { label: "English", patterns: [/\b(?:your|account|please|click|payment|verify|message)\b/i, /\b(?:the|this|will|with|from)\b/i] },
+  { label: "German", patterns: [/\b(?:ihr|konto|bitte|klicken|zahlung|best[aä]tigen|nachricht)\b/i, /\b(?:dringend|sofort|passwort|daten|[uü]berweisung)\b/i] },
+  { label: "Spanish", patterns: [/\b(?:su|cuenta|por favor|haga clic|pago|verificar|mensaje)\b/i, /\b(?:urgente|contrase[nñ]a|datos|transferencia|ahora)\b/i] },
+  { label: "French", patterns: [/\b(?:votre|compte|veuillez|cliquez|paiement|v[ée]rifier|message)\b/i, /\b(?:urgent|mot de passe|donn[ée]es|virement|imm[ée]diatement)\b/i] },
+  { label: "Dutch", patterns: [/\b(?:uw|rekening|alstublieft|klik|betaling|verifieer|bericht)\b/i, /\b(?:dringend|wachtwoord|gegevens|overschrijving|onmiddellijk)\b/i] },
+] as const;
+
+export const generalLanguagePatterns: Record<string, RegExp[]> = {
+  English: [/\b(?:and|with|from|that|this|please|your|have|will)\b/i],
+  German: [/\b(?:und|mit|von|dass|dies|bitte|ihre|haben|wird|nicht)\b/i],
+  Spanish: [/\b(?:y|con|desde|que|este|esta|por favor|usted|tiene|ser[aá]|no)\b/i],
+  French: [/\b(?:et|avec|depuis|que|ce|cette|veuillez|vous|votre|sera|pas)\b/i],
+  Dutch: [/\b(?:en|met|van|dat|dit|deze|alstublieft|heeft|wordt|niet)\b/i],
+};
+
+export const bhsLanguagePatterns = [
+  /\b(?:va[sš]|ra[cč]un|nalog|molimo|kliknite|uplata|potvrdite|poruka)\b/i,
+  /\b(?:odmah|hitno|lozink|podatke|po[sš]alj)\w*/i,
+  /[čćđšž]/i,
+  /[\u0400-\u04ff]/,
+];
+
+export const bhsCommonLanguagePatterns = [
+  /\b(?:sa|iz|da|ovo|ova|molim|va[sš]|imate|nije|biti|poruka|ra[cč]un|nalog)\b/i,
+];
+
+export const regionalBhsProfiles = [
+  {
+    label: "Bosnian",
+    patterns: [
+      /\b(?:ra[cč]un [cć]e|[cć]e biti blokiran|historij|op[cć]in|lahko)\w*/i,
+      /\b(?:saglasnost|li[cč]ni|sljede[cć]|provjer)\w*/i,
+    ],
+  },
+  {
+    label: "Croatian",
+    patterns: [
+      /\bbit [cć]e\b/i,
+      /\b(?:poveznic|zapork|tisu[cć]|sije[cč]|tvrtk|osobn|uvjet|povijest|neovisn)\w*/i,
+    ],
+  },
+  {
+    label: "Serbian",
+    patterns: [
+      /[\u0400-\u04ff]/,
+      /\b(?:prover|bezbed|slede[cć]|bi[cć]e|nalog|uslov|preduze[cć]|hiljad)\w*/i,
+    ],
+  },
+] as const;
+
+export const suspiciousTlds = new Set([
+  "zip",
+  "mov",
+  "click",
+  "top",
+  "xyz",
+  "live",
+  "support",
+  "work",
+  "shop",
+  "rest",
+  "gq",
+  "tk",
+]);
+
+export const shorteners = new Set([
+  "bit.ly",
+  "tinyurl.com",
+  "t.co",
+  "is.gd",
+  "cutt.ly",
+  "rb.gy",
+  "shorturl.at",
+]);

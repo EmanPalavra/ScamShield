@@ -1,0 +1,26 @@
+{
+  "frozenAt": "2026-07-27",
+  "policy": "Historical pre-model benchmark. These sources were later used to train the local model, so this manifest and report are reproducibility records, not post-model unseen evidence.",
+  "sources": [
+    {
+      "id": "imc25-smishing",
+      "repository": "https://github.com/reportsmishing/Smishing-Dataset-IMC25",
+      "paper": "https://doi.org/10.1145/3730567.3764431",
+      "commit": "a6175560b57387199871e51fbef6bc523d2516b4",
+      "path": "dataset/final_dataset_output.csv",
+      "license": "CC BY 4.0",
+      "sha256": "1bbd1e9e82c3ea023112207b80da268a5c4a07d2353c2b0898360ab037fa9a64",
+      "localFile": "imc25-smishing.csv"
+    },
+    {
+      "id": "smishx",
+      "repository": "https://github.com/yizhu-joy/SmishX",
+      "paper": "https://www.usenix.org/conference/soups2025/presentation/wang-yizhu",
+      "commit": "116a8c827741e0572563f678d25ed04306b1e3ff",
+      "path": "data/dataset.csv",
+      "license": "MIT",
+      "sha256": "8d65e373b17477c34e8f1c619e6f59d249e8fca21276cabdd03a55d11a469285",
+      "localFile": "smishx-holdout.csv"
+    }
+  ]
+}

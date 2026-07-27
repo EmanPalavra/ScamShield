@@ -40,7 +40,7 @@ export default function PrivacyPage() {
           <h2>Pasted messages are not intentionally saved to an app database</h2>
           <p>The current application does not maintain user profiles, scan history, or a database of submitted message bodies. A result is returned to the current browser session.</p>
           <ul className="info-points">
-            <li>Short-lived in-memory abuse controls may process request metadata such as an IP-derived rate bucket.</li>
+            <li>Abuse controls transform client IPs into server-secret HMAC buckets that rotate daily; raw IPs and enumerable unsalted hashes are not used as bucket identifiers.</li>
             <li>Cloudflare platform logs and security telemetry may exist according to the hosting account configuration.</li>
             <li>External providers maintain their own logs and retention rules independently of ScamShield.</li>
           </ul>
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
         <div className="info-section-copy">
           <span className="info-section-label">URL enrichment</span>
           <h2>External services receive only the data needed for their check</h2>
-          <p>When configured, eligible public URL or domain information is sent to security and registration providers. Private and reserved network addresses, embedded credentials, and sensitive tokenized URLs are blocked from external submission. Provider privacy policies, logging practices, and terms still apply to accepted requests.</p>
+          <p>When configured, eligible public URL or domain information is sent to security and registration providers. Private and reserved network addresses and embedded credentials are blocked. Sensitive query values are removed by default, while sharing a complete tokenized URL requires a separate explicit opt-in. Provider privacy policies, logging practices, and terms still apply to accepted requests.</p>
           <div className="privacy-provider-grid">
             <div><strong>Google Safe Browsing</strong><p>Receives URLs for known-threat matching.</p></div>
             <div><strong>RDAP services</strong><p>Receive domain-registration queries, not the full message.</p></div>
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
         <div className="info-section-copy">
           <span className="info-section-label">Explicit external submission</span>
           <h2>A new VirusTotal analysis never starts automatically</h2>
-          <p>Deep Scan first asks for an existing report. If you choose a fresh analysis, ScamShield displays a privacy warning and requires explicit consent before sending the URL.</p>
+          <p>Deep Scan first asks for an existing report. If you choose a fresh analysis, ScamShield displays a privacy warning and requires explicit consent before sending the URL. A tokenized URL also requires the separate exact-sharing consent.</p>
           <ul className="info-points">
             <li>Submitted URLs and results may become visible to VirusTotal and its security community.</li>
             <li>Never submit private, one-time, credential-bearing, intranet, or password-reset links.</li>

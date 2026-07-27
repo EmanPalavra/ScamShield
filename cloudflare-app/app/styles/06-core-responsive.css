@@ -1,0 +1,283 @@
+@media (max-width: 960px) {
+  .hero {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-console {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .shield-orbit {
+    margin-top: 15px;
+    margin-bottom: 15px;
+  }
+
+  .result-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inspection-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .url-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .domain-intel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signal-group-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    position: relative;
+    top: auto;
+    align-items: center;
+  }
+
+  .site-header nav a {
+    display: none;
+  }
+
+  .site-header nav {
+    width: auto;
+  }
+
+  .theme-toggle > span:last-child {
+    display: inline;
+  }
+
+  .hero {
+    padding: 60px 0 48px;
+  }
+
+  .hero h1 {
+    font-size: clamp(45px, 14vw, 66px);
+  }
+
+  .scanner-heading,
+  .results-topline {
+    align-items: stretch;
+  }
+
+  .privacy-chip {
+    width: fit-content;
+  }
+
+  .scan-options,
+  .simple-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-option {
+    min-height: 132px;
+  }
+
+  .utility-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .progress-panel ol {
+    grid-template-columns: 1fr;
+  }
+
+  .result-actions {
+    width: 100%;
+  }
+
+  .view-switch {
+    flex: 1;
+  }
+
+  .copy-button {
+    flex: 0 0 auto;
+  }
+
+  .result-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .verdict-command {
+    grid-template-columns: 1fr;
+  }
+
+  .url-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .domain-intel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .domain-intel-heading small {
+    text-align: left;
+  }
+
+  .compact-providers {
+    grid-template-columns: 1fr;
+  }
+
+  .deep-heading {
+    grid-template-columns: 50px 1fr;
+  }
+
+  .external-badge {
+    grid-column: 2;
+    width: fit-content;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-header,
+  main,
+  .site-footer,
+  .info-main {
+    width: min(100% - 20px, 1160px);
+  }
+
+  .site-header {
+    min-height: 62px;
+    margin-top: 10px;
+    padding: 0 13px;
+  }
+
+  .brand-name {
+    display: inline !important;
+    font-size: 10px;
+  }
+
+  .theme-toggle > span:last-child {
+    display: none;
+  }
+
+  .scanner-shell,
+  .results {
+    padding: 21px 14px;
+    border-radius: 21px;
+  }
+
+  .hero-console {
+    padding: 15px;
+    border-radius: 20px;
+  }
+
+  .editor-card {
+    padding: 9px;
+  }
+
+  .editor-card textarea {
+    min-height: 180px;
+    padding: 14px;
+  }
+
+  .scan-option {
+    padding: 14px;
+    grid-template-columns: 38px 1fr 18px;
+    gap: 10px;
+  }
+
+  .mode-icon {
+    width: 38px;
+    height: 42px;
+  }
+
+  .result-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .copy-button {
+    width: 100%;
+  }
+
+  .result-metrics,
+  .technical-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .result-list-card,
+  .inspection-card,
+  .url-overview,
+  .deep-panel {
+    padding: 17px;
+  }
+
+  .url-report-main {
+    flex-direction: column;
+  }
+
+  .url-score {
+    text-align: left;
+  }
+
+  .url-facts,
+  .vt-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .domain-intel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-group-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-group {
+    padding: 10px;
+  }
+
+  .compact-provider {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .compact-provider small {
+    display: block;
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  .compact-provider > b {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .card-title {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .card-stat {
+    width: fit-content;
+    margin-left: 45px;
+  }
+
+  .job-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-copy,
+  .hero-console,
+  .results,
+  .progress-panel,
+  .orbit,
+  .hero-console::before,
+  .hero-badge > span,
+  .console-topline i,
+  .scanner-pulse i {
+    animation: none !important;
+  }
+}

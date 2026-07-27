@@ -27,7 +27,7 @@ A scan can include:
 | Quick Scan | Routine messages and links | Message patterns, URL structure, domain age, and Google Safe Browsing when configured |
 | Deep Scan | Cases where a link is the main concern | Everything in Quick Scan plus the latest available VirusTotal report |
 
-ScamShield checks for an existing VirusTotal report first. Submitting a URL for a fresh analysis is a separate action and requires explicit consent.
+ScamShield checks for an existing VirusTotal report first. Submitting a URL for a fresh analysis is a separate action and requires explicit consent. URLs containing access tokens, session identifiers, or similar credentials are sanitized before external checks unless the user separately consents to exact URL sharing.
 
 ## How the analysis works
 
@@ -76,11 +76,13 @@ All variables are optional for local development. Missing provider credentials d
 | `GOOGLE_API_KEY` | Google Safe Browsing requests | Server secret |
 | `VIRUSTOTAL_API_KEY` | Existing reports and consent-based submissions | Server secret |
 | `STATUS_SIGNING_KEY` | Signs short-lived VirusTotal polling tokens | Server secret |
+| `RATE_LIMIT_SIGNING_KEY` | HMAC-signs daily rotating, non-reversible rate-limit buckets | Server secret |
 | `TURNSTILE_SITE_KEY` | Renders the Turnstile widget | Public |
 | `TURNSTILE_SECRET_KEY` | Validates Turnstile tokens | Server secret |
 | `DISABLE_EXTERNAL_CHECKS` | Disables provider calls during tests | Local/test only |
 
 Production secrets should be stored with Cloudflare and must not be committed to the repository.
+Use a dedicated random `RATE_LIMIT_SIGNING_KEY` of at least 32 bytes. If it is absent, ScamShield can reuse another sufficiently strong server-only secret with domain-separated HMAC input; a dedicated key remains the recommended production setup.
 
 ## Validation
 
@@ -94,15 +96,36 @@ pnpm test
 
 The test suite covers public page rendering, security headers, scan behavior, global rate-limit behavior, provider fallbacks, request validation, private-URL protection, signed polling, and the transparency pages.
 
+### Scoring evaluation
+
+The local message score can be measured against the user-collected samples, the UCI SMS Spam Collection, and
+SpaPhish v5:
+
+```powershell
+pnpm run evaluate:download
+pnpm run evaluate
+pnpm run evaluate:holdout
+pnpm run evaluate:train-model
+pnpm run evaluate:final-holdout
+```
+
+Raw corpus messages stay local and are excluded from Git. The primary independent performance report is
+[`cloudflare-app/evaluation/FINAL_HOLDOUT.md`](cloudflare-app/evaluation/FINAL_HOLDOUT.md).
+[`cloudflare-app/evaluation/FROZEN_HOLDOUT.md`](cloudflare-app/evaluation/FROZEN_HOLDOUT.md) records the pre-model
+benchmark and is no longer unseen because its sources were subsequently used for model training.
+[`cloudflare-app/evaluation/BASELINE.md`](cloudflare-app/evaluation/BASELINE.md) is a development regression report,
+not an independent estimate.
+
 ## Security and privacy
 
 - Provider credentials remain in the Worker environment and are not returned to the browser.
 - Request bodies and URL counts are bounded before analysis.
-- Private, local, reserved, credential-bearing, and sensitive tokenized URLs are not sent to external providers.
+- Private, local, reserved, and credential-bearing destinations are not sent to external providers. Sensitive query values are removed by default; sharing the complete tokenized URL requires a separate explicit opt-in.
 - Cross-site writes, unsupported methods, and unexpected content types are rejected.
-- Scan quotas use sharded, SQLite-backed Cloudflare Durable Objects, so limits remain consistent across Worker locations and deployments without storing raw IP addresses.
+- Scan quotas use sharded, SQLite-backed Cloudflare Durable Objects. Client IPs are transformed with a server-secret HMAC and a daily rotation boundary, so raw IPs and enumerable unsalted hashes are not used as bucket identifiers.
 - Fresh VirusTotal submissions require explicit consent and a valid Turnstile token when Turnstile is enabled.
 - Submitted message text is processed for the request and is not intentionally stored in an application database.
+- The compact statistical message model runs locally inside the Worker; it does not send message text to an AI API.
 
 URLs may be shared with configured reputation providers. The interface identifies when a check uses an external service.
 
