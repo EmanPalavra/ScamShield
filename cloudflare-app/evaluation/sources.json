@@ -129,5 +129,85 @@
     "language": "English",
     "expectedSamples": 1200,
     "includedBy": "evaluation/train-local-model.ts; also retained in the historical pre-model holdout report"
+  },
+  {
+    "id": "spamhunter-manual-fraud",
+    "name": "SpamHunter manually categorized SMS sample",
+    "url": "https://github.com/opmusic/SpamHunter_dataset",
+    "paper": "https://doi.org/10.1145/3548606.3560591",
+    "license": "No explicit repository license; local research evaluation only, raw data is not redistributed",
+    "labels": "Manual Fraud/Ads category and source-language labels; SMS Translation is English and is not valid original-language evaluation text",
+    "language": "English translations of messages whose source labels include English, German, French, Dutch",
+    "expectedSamples": 947,
+    "includedBy": "Retired research material; not used for per-language performance claims"
+  },
+  {
+    "id": "bhs-independent-authority-excerpts",
+    "name": "Independent BHS authority-confirmed fraud excerpts",
+    "urls": [
+      "https://app.raiffeisenbank.ba/en/node/4156",
+      "https://mup.gov.hr/print.aspx?id=183822&url=print",
+      "https://www.cert.hr/upozorenje-oprezno-s-whatsapp-porukama/",
+      "https://www.cert.hr/upozorenje-napadaci-se-i-dalje-predstavljaju-kao-hep-te-prijete-iskljucivanjem-struje/"
+    ],
+    "license": "Short verbatim excerpts for security evaluation; attribution retained",
+    "labels": "Explicitly identified as fraudulent by a bank, police, or national CERT",
+    "language": "Bosnian/Croatian/Serbian",
+    "expectedSamples": 6,
+    "includedBy": "Calibration/reference only; retired as an independent BHS holdout"
+  },
+  {
+    "id": "bhs-current-real-world",
+    "name": "Current authority-confirmed BHS scam messages",
+    "urls": [
+      "https://www.posta.ba/upozorenje-na-lazne-sms-poruke-ne-nasjedajte-na-pokusaje-prevare/",
+      "https://www.posta.ba/upozorenje-korisnicima-ne-klikajte-na-sumnjive-linkove-iz-sms-poruka/",
+      "https://www.posta.ba/nove-prevare-putem-laznih-poruka-ne-otvarajte-link-bh-posta-dostava/",
+      "https://www.posta.ba/ne-otvarajte-sumnjive-linkove-nova-pojava-laznih-sms-poruka-o-dostavi-posiljki/",
+      "https://www.bhtelecom.ba/usluge-za-privatne-korisnike/2026/03/upozorenje-za-korisnike-usluga-2/",
+      "https://mtel.ba/Korisnicka-zona/Vijesti/a37670-Vazno-obavjestenje-za-korisnike-o-neovlastenim-porukama-o-novcanim-nagradama.html",
+      "https://policija.gov.hr/vijesti/dobili-ste-sms-poruku-svog-djeteta-da-ima-novi-broj-mobitela/8896?big=0",
+      "https://www.cert.hr/upozorenje-oprezno-s-whatsapp-porukama/",
+      "https://www.cert.hr/upozorenje-lazne-sms-poruke-u-kojima-se-napadaci-predstavljaju-kao-netflix/",
+      "https://www.cert.hr/upozorenje-u-tijeku-je-sms-prijevara-s-placanjem-kazni/",
+      "https://www.cert.rs/rs/obavestenje/1494-Aktuelna-fi%C5%A1ing-kampanja-koja-zloupotrebljava-ime-JP-%E2%80%9EPutevi-Srbije%E2%80%9C.html",
+      "https://www.cert.rs/rs/obavestenje/1519-Ponovo-aktuelna-fi%C5%A1ing-kampanja-koja-zloupotrebljava-ime-JP-%E2%80%9EPutevi-Srbije%E2%80%9C.html",
+      "https://www.nbs.rs/sr/scripts/showcontent/index.html?id=20711"
+    ],
+    "license": "Short security-research excerpts; malicious links and personal identifiers removed; source attribution retained",
+    "labels": "Explicitly confirmed or described as fraudulent by the cited national CERT, police, postal operator, bank, central bank, or telecom",
+    "language": "Bosnian, Croatian, Serbian Latin and Serbian Cyrillic",
+    "expectedSamples": 25,
+    "includedBy": "evaluation/bhs-current-real-world.ts; source-held-out rows excluded from model training"
+  },
+  {
+    "id": "bhs-frozen-independent-benchmark",
+    "name": "Frozen BHS source-held-out benchmark",
+    "urls": [
+      "https://www.ff.unsa.ba/index.php/bs/projekti-centra-za-b-h-s-jezik/18335-sarajevski-korpus-sms-poruka-na-bosanskom-jeziku",
+      "https://www.posta.ba/ne-otvarajte-sumnjive-linkove-nova-pojava-laznih-sms-poruka-o-dostavi-posiljki/",
+      "https://www.cert.hr/upozorenje-u-tijeku-je-sms-prijevara-s-placanjem-kazni/",
+      "https://www.cert.rs/rs/obavestenje/1519-Ponovo-aktuelna-fi%C5%A1ing-kampanja-koja-zloupotrebljava-ime-JP-%E2%80%9EPutevi-Srbije%E2%80%9C.html"
+    ],
+    "license": "Sarajevo Corpus CC BY 4.0; short attributed authority excerpts; project-authored challenge cases",
+    "labels": "600 authentic legitimate SMS; 19 authority-verbatim scam messages; 6 authority-described campaigns; 75 source-grounded synthetic challenge messages",
+    "language": "Bosnian, Croatian, Serbian Latin and Serbian Cyrillic",
+    "expectedSamples": 700,
+    "includedBy": "evaluation/bhs-independent-benchmark.ts; all rows excluded from model training",
+    "manifest": "evaluation/bhs-independent-manifest.json"
+  },
+  {
+    "id": "synthetic-multilingual-authority-derived",
+    "name": "Multilingual authority-pattern training augmentation",
+    "urls": [
+      "https://www.bundesnetzagentur.de/DE/Vportal/TK/Aerger/Faelle/SMSSpam/artikel.html",
+      "https://www.asabanka.ba/upozorenje-na-phishing-sms-poruke/",
+      "https://www.posta.ba/ne-otvarajte-lazne-poruke-o-neuspjeloj-isporuci-posiljki-ili-neplacenim-carinskim-dazbinama/"
+    ],
+    "license": "Generated project training material; source patterns attributed",
+    "labels": "Synthetic scam variants and synthetic hard negatives; never represented as authentic messages",
+    "language": "English, German, French, Dutch, Spanish, BHS",
+    "expectedSamples": 1560,
+    "includedBy": "evaluation/multilingual-training-examples.ts; model training only"
   }
 ]

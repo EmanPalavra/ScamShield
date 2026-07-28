@@ -7,6 +7,8 @@ import { supportedLocales } from "./translations";
 
 const THEME_STORAGE_KEY = "scamshield-theme";
 const THEME_CHANGE_EVENT = "scamshield-theme-change";
+const DIAGNOSTICS_STORAGE_KEY = "scamshield-anonymous-diagnostics";
+const DIAGNOSTICS_CHANGE_EVENT = "scamshield-diagnostics-change";
 
 type Theme = "light" | "dark";
 
@@ -73,10 +75,25 @@ function subscribeToTheme(onStoreChange: () => void) {
   };
 }
 
+function getDiagnosticsSnapshot() {
+  return window.localStorage.getItem(DIAGNOSTICS_STORAGE_KEY) === "enabled";
+}
+
+function subscribeToDiagnostics(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(DIAGNOSTICS_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(DIAGNOSTICS_CHANGE_EVENT, onStoreChange);
+  };
+}
+
 export function SiteHeader({ activePath }: { activePath?: string }) {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, () => "dark");
+  const diagnosticsEnabled = useSyncExternalStore(subscribeToDiagnostics, getDiagnosticsSnapshot, () => false);
   const { locale, setLocale, t } = useLanguage();
   const languageMenuRef = useRef<HTMLDetailsElement>(null);
+  const settingsMenuRef = useRef<HTMLDetailsElement>(null);
   const currentLanguage = supportedLocales.find((option) => option.code === locale) ?? supportedLocales[0];
 
   useEffect(() => {
@@ -84,22 +101,24 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
   }, [theme]);
 
   useEffect(() => {
-    function closeLanguageMenu(event: PointerEvent) {
+    function closeHeaderMenus(event: PointerEvent) {
       if (!languageMenuRef.current?.contains(event.target as Node)) languageMenuRef.current?.removeAttribute("open");
+      if (!settingsMenuRef.current?.contains(event.target as Node)) settingsMenuRef.current?.removeAttribute("open");
     }
 
-    function closeLanguageMenuWithKeyboard(event: KeyboardEvent) {
+    function closeHeaderMenusWithKeyboard(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        languageMenuRef.current?.removeAttribute("open");
-        languageMenuRef.current?.querySelector("summary")?.focus();
+        const openMenu = [languageMenuRef.current, settingsMenuRef.current].find((menu) => menu?.hasAttribute("open"));
+        openMenu?.removeAttribute("open");
+        openMenu?.querySelector("summary")?.focus();
       }
     }
 
-    document.addEventListener("pointerdown", closeLanguageMenu);
-    document.addEventListener("keydown", closeLanguageMenuWithKeyboard);
+    document.addEventListener("pointerdown", closeHeaderMenus);
+    document.addEventListener("keydown", closeHeaderMenusWithKeyboard);
     return () => {
-      document.removeEventListener("pointerdown", closeLanguageMenu);
-      document.removeEventListener("keydown", closeLanguageMenuWithKeyboard);
+      document.removeEventListener("pointerdown", closeHeaderMenus);
+      document.removeEventListener("keydown", closeHeaderMenusWithKeyboard);
     };
   }, []);
 
@@ -107,6 +126,11 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
     const nextTheme = theme === "dark" ? "light" : "dark";
     window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
+  }
+
+  function toggleDiagnostics() {
+    window.localStorage.setItem(DIAGNOSTICS_STORAGE_KEY, diagnosticsEnabled ? "disabled" : "enabled");
+    window.dispatchEvent(new Event(DIAGNOSTICS_CHANGE_EVENT));
   }
 
   return (
@@ -121,7 +145,14 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
             {item.label}
           </Link>
         ))}
-        <details className="language-picker" ref={languageMenuRef} data-i18n-skip>
+        <details
+          className="language-picker"
+          ref={languageMenuRef}
+          data-i18n-skip
+          onToggle={(event) => {
+            if (event.currentTarget.open) settingsMenuRef.current?.removeAttribute("open");
+          }}
+        >
           <summary aria-label={`Language: ${currentLanguage.label}`} title={currentLanguage.label}>
             <LanguageFlag code={currentLanguage.code} />
             <strong>{currentLanguage.short}</strong>
@@ -148,26 +179,82 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
             ))}
           </div>
         </details>
-        <button
-          className="theme-toggle"
-          type="button"
-          data-i18n-skip
-          data-current-theme={theme}
-          onClick={toggleTheme}
-          aria-label={t(`Switch to ${theme === "dark" ? "light" : "dark"} mode`)}
-          title={t(`Switch to ${theme === "dark" ? "light" : "dark"} mode`)}
-        >
-          <span className="theme-toggle-icon" aria-hidden="true">
-            <svg className="theme-icon theme-icon-sun" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="3.5" />
-              <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" />
-            </svg>
-            <svg className="theme-icon theme-icon-moon" viewBox="0 0 24 24">
-              <path d="M19.2 15.2A8 8 0 0 1 8.8 4.8 8.1 8.1 0 1 0 19.2 15.2Z" />
-            </svg>
-          </span>
-          <span className="theme-toggle-label">{t(theme === "dark" ? "Light" : "Dark")}</span>
-        </button>
+        <div className="header-controls">
+          <button
+            className="theme-toggle header-icon-button"
+            type="button"
+            data-i18n-skip
+            data-current-theme={theme}
+            onClick={toggleTheme}
+            aria-label={t(`Switch to ${theme === "dark" ? "light" : "dark"} mode`)}
+            title={t(`Switch to ${theme === "dark" ? "light" : "dark"} mode`)}
+          >
+            <span className="theme-control-glyph" aria-hidden="true">
+              {theme === "dark" ? (
+                <svg className="theme-control-icon theme-control-icon-sun" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="3.5" />
+                  <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" />
+                </svg>
+              ) : (
+                <svg className="theme-control-icon theme-control-icon-moon" viewBox="0 0 24 24">
+                  <path d="M19.2 15.2A8 8 0 0 1 8.8 4.8 8.1 8.1 0 1 0 19.2 15.2Z" />
+                </svg>
+              )}
+            </span>
+          </button>
+
+          <details
+            className="settings-picker"
+            ref={settingsMenuRef}
+            onToggle={(event) => {
+              if (event.currentTarget.open) languageMenuRef.current?.removeAttribute("open");
+            }}
+          >
+            <summary className="header-icon-button" aria-label={t("Settings")} title={t("Settings")}>
+              <svg className="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3.1" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.82 2.82-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.55V21h-4v-.09A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.82-2.82.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.04H3v-4h.05A1.7 1.7 0 0 0 4.6 8.92a1.7 1.7 0 0 0-.34-1.88L4.2 6.98l2.82-2.82.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3.01V3h4v.01a1.7 1.7 0 0 0 1.04 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.82 2.82-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.04H21v4h-.05A1.7 1.7 0 0 0 19.4 15Z" />
+              </svg>
+            </summary>
+            <div className="settings-menu">
+              <div className="settings-heading">
+                <span className="settings-heading-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 3 5 6v5c0 4.7 2.9 8.5 7 10 4.1-1.5 7-5.3 7-10V6l-7-3Z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </span>
+                <div>
+                  <strong>{t("Privacy & diagnostics")}</strong>
+                  <small>{t("You are always in control.")}</small>
+                </div>
+              </div>
+
+              <button
+                className="diagnostics-setting"
+                type="button"
+                role="switch"
+                aria-checked={diagnosticsEnabled}
+                onClick={toggleDiagnostics}
+              >
+                <span className="diagnostics-copy">
+                  <strong>{t("Anonymous diagnostics")}</strong>
+                  <small>{t("Only errors and scan duration. Never messages, URLs, or IP addresses.")}</small>
+                </span>
+                <span className="settings-switch" aria-hidden="true"><i /></span>
+              </button>
+
+              <div className="settings-status" aria-live="polite">
+                <span className={diagnosticsEnabled ? "status-dot enabled" : "status-dot"} aria-hidden="true" />
+                {t(diagnosticsEnabled ? "Anonymous diagnostics are enabled" : "Anonymous diagnostics are disabled")}
+              </div>
+              <Link href="/privacy" onClick={() => settingsMenuRef.current?.removeAttribute("open")}>
+                {t("View privacy details")}
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </details>
+        </div>
       </nav>
     </header>
   );

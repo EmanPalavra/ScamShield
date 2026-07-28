@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { extractUrls, messageRuleAnalysis } from "../worker/scanner/message-analysis.ts";
 import { extractMlFeatures, ML_FEATURE_DIMENSION } from "../worker/scanner/ml-features.ts";
+import type { EvaluationSample } from "./dataset-types.ts";
+import { languageHoldoutNegativeIds } from "./language-holdout-split.ts";
+import { localizedTrainingExamples } from "./localized-training-examples.ts";
+import { multilingualTrainingExamples } from "./multilingual-training-examples.ts";
+import { selectRetainedBenchmark } from "./multilingual-retained-benchmark.ts";
 
 const evaluationDir = path.dirname(fileURLToPath(import.meta.url));
 const projectDir = path.dirname(evaluationDir);
@@ -94,8 +99,17 @@ const generated = (await readFile(generatedPath, "utf8"))
     label: "scam" | "legitimate";
     scamType: string | null;
     source: string;
+    evaluationSplit?: "calibration" | "holdout";
   });
+const reservedLanguageHoldoutIds = languageHoldoutNegativeIds(generated as EvaluationSample[]);
+const imcText = await readFile(imcPath, "utf8");
+const retainedBenchmarkIds = new Set(
+  selectRetainedBenchmark(imcText, generated as EvaluationSample[]).map((sample) => sample.id),
+);
 for (const row of generated) {
+  if (row.evaluationSplit === "holdout") continue;
+  if (row.source.startsWith("bhs-real-")) continue;
+  if (reservedLanguageHoldoutIds.has(row.id) || retainedBenchmarkIds.has(`existing:${row.id}`)) continue;
   if (row.label === "scam" && row.scamType === "Generic SMS spam") continue;
   samples.push({
     id: `existing:${row.id}`,
@@ -106,8 +120,9 @@ for (const row of generated) {
 }
 
 const securityTypes = new Set(["banking", "delivery", "government", "telecom", "hey mum/dad", "others"]);
-for (const [index, row] of records(await readFile(imcPath, "utf8")).entries()) {
+for (const [index, row] of records(imcText).entries()) {
   if (!row.text || !securityTypes.has(row.scam_type.toLocaleLowerCase())) continue;
+  if (retainedBenchmarkIds.has(`imc:${index}`)) continue;
   samples.push({ id: `imc:${index}`, text: row.text, label: 1, source: "imc25-smishing" });
 }
 for (const [index, row] of records(await readFile(smishxPath, "utf8")).entries()) {
@@ -119,6 +134,8 @@ for (const [index, row] of records(await readFile(smishxPath, "utf8")).entries()
     source: "smishx",
   });
 }
+samples.push(...localizedTrainingExamples);
+samples.push(...multilingualTrainingExamples);
 
 const unique = new Map<string, TrainingSample>();
 const conflicts = new Set<string>();
@@ -218,9 +235,9 @@ const candidates: Array<{
   decisionThreshold: number;
   result: ReturnType<typeof metrics>;
 }> = [];
-// Quantized n-gram models can be overconfident on unfamiliar wording. Requiring
-// at least 99.5% keeps ML as a conservative gap-filler instead of a primary veto.
-for (let thresholdStep = 995; thresholdStep <= 999; thresholdStep += 1) {
+// Keep ML as a gap-filler, but search a wider high-confidence band. The existing
+// validation FPR guardrail rejects any recall gain that creates too many alerts.
+for (let thresholdStep = 980; thresholdStep <= 999; thresholdStep += 1) {
   const decisionThreshold = thresholdStep / 1_000;
   const result = metrics(decisionThreshold);
   if (result.fpr <= maximumFpr) candidates.push({ decisionThreshold, result });
@@ -269,6 +286,8 @@ Model: local-logreg-${fingerprint}
 - Features: normalized character 3/4-grams, word unigrams/bigrams, and bounded structural indicators.
 - Training/validation: ${training.length}/${validation.length}, deterministic 80/20 text-hash split after exact deduplication.
 - Training positives/negatives: ${positives}/${negatives}.
+- Legitimate language-holdout rows excluded before training: ${reservedLanguageHoldoutIds.size}.
+- Retained multilingual rows excluded before training: ${retainedBenchmarkIds.size}.
 - Label conflicts excluded: ${conflicts.size}.
 - Model size: ${quantized.byteLength.toLocaleString()} weight bytes before Base64.
 - Hybrid policy: preserve every rule alert; ML may only raise a Low result to Medium.

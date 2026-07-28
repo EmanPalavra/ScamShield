@@ -6,6 +6,7 @@ import { unzipSync } from "fflate";
 import { authorityScamExamples } from "./authority-scam-examples.ts";
 import { authorityScamCampaigns } from "./authority-scam-campaigns.ts";
 import { authorityScamAudit } from "./authority-scam-audit.ts";
+import { bhsCurrentRealWorldSamples } from "./bhs-current-real-world.ts";
 import type { EvaluationSample } from "./dataset-types.ts";
 import { userScamTypes } from "./user-scam-labels.ts";
 
@@ -350,6 +351,7 @@ samples.push(...parseUserScams(await readFile(path.join(repositoryDir, "Scams.tx
 samples.push(...authorityScamExamples);
 samples.push(...authorityScamCampaigns);
 samples.push(...authorityScamAudit);
+samples.push(...bhsCurrentRealWorldSamples);
 
 const uciPath = path.join(rawDir, "SMSSpamCollection");
 if (await exists(uciPath)) samples.push(...parseUci(await readFile(uciPath, "utf8")));

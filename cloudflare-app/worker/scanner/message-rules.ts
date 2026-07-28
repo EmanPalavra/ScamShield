@@ -30,6 +30,9 @@ export const categoryRules: Rule[] = [
       /(?:neplaćen\w*|neplacen\w*).{0,45}(?:putarin\w*|saobraćajn\w* kazn\w*).{0,80}(?:plati|uplat|izmir)/i,
       /(?:paiement|transaction|achat).{0,100}(?:inhabituel|inconnu|non reconnu|sera prélevé).{0,100}(?:appelez|contactez|si vous ne)/i,
       /(?:ideal|overboeking).{0,100}(?:goedgekeurd|bevestigd).{0,100}(?:herkent u niet|niet was|bel|contact)/i,
+      /(?:unbezahlte\w*|offene\w*).{0,35}(?:strafzettel|bußgeld|bussgeld).{0,80}(?:bezahlen|zahlen|begleichen)/i,
+      /(?:banka|bankovni račun|bankovni racun|kartica).{0,100}(?:nepoznat\w*|sumnjiv\w*|neovlašten\w*|neovlasten\w*).{0,45}(?:transakcij\w*|plaćanj\w*|placanj\w*)/i,
+      /(?:nepoznat\w*|sumnjiv\w*|neovlašten\w*|neovlasten\w*).{0,45}(?:transakcij\w*|plaćanj\w*|placanj\w*).{0,100}(?:ako (?:ovo|to) niste vi|pozov|kontaktir|provjer|prover)/i,
     ],
   },
   {
@@ -57,10 +60,15 @@ export const categoryRules: Rule[] = [
       /(?:tax refund|irs|state tax).{0,100}(?:approved|processed|ready to send).{0,100}(?:verify|confirm|social security|bank)/i,
       /(?:pushtan|phototan|securego|online.banking|sicherheits-app).{0,100}(?:läuft ab|gesperrt|eingeschränkt|installieren|erneuern|bestätigen)/i,
       /(?:konto|karte).{0,100}(?:seltsame|unregelmäßige|betrügerische).{0,50}(?:aktivität|transaktion).{0,80}(?:gesperrt|bestätigen|wiederherstellen)/i,
+      /(?:registrierung|banking[- ]?app|banking[- ]?to[- ]?go).{0,100}(?:läuft (?:in kürze|bald) ab|abgelaufen|endet).{0,100}(?:hier|link|registrier|erneuer)/i,
+      /(?:konto|karte|banking).{0,90}(?:eingeschränkt|vorübergehend gesperrt|deaktiviert).{0,100}(?:daten|angaben|identität|hier|link).{0,60}(?:bestätigen|prüfen|aktualisieren|verifizieren)/i,
+      /(?:banka|bankovni račun|bankovni racun|kartica|račun|racun).{0,100}(?:ograničen|ogranicen|blokiran|zaključan|zakljucan|privremeno obustavljen).{0,100}(?:potvrd|provjer|prover|ažurir|azurir).{0,70}(?:podat|identitet|link|vezu|poveznic)/i,
       /(?:takmičenj\w*|natjecanj\w*|такмичењ\w*).{0,100}(?:glasaj|glasati|гласај|гласати).{0,100}(?:link|whatsapp|линк)/i,
       /(?:glasaj|glasati|гласај|гласати).{0,80}(?:takmičenj\w*|natjecanj\w*|такмичењ\w*|whatsapp).{0,100}(?:link|prijav|potvrd|линк)/i,
       /(?:glasanj\w*|гласањ\w*).{0,80}(?:prijav|potvrd|link|whatsapp|пријав|потврд|линк)/i,
       /(?:finanzamt|einkommensteuer|steuerrückerstattung|rückerstattung).{0,100}(?:bestätigen|verifizieren|konto|link)/i,
+      /(?:ntfx|netflix).{0,100}(?:последње задужење|задужење).{0,60}(?:одбијено|није успело)/i,
+      /(?:задужење).{0,80}(?:одбијено).{0,120}(?:наставили да користите|посетите)/i,
       /(?:buitenland|buitenlandse|onbekende|vreemde).{0,45}(?:ingelogd|inlogpoging|login).{0,100}(?:bel|niet|veilig)/i,
       /(?:saldo veilig|veilig te stellen).{0,80}(?:bel|toegang|inlogcode|software)/i,
       /(?:véhicule|certificat).{0,100}(?:conformité|sous peine|contravention|amende).{0,100}(?:lien|commander|régularis)/i,
@@ -83,6 +91,10 @@ export const categoryRules: Rule[] = [
       /(?:pakket|bezorging).{0,120}(?:onjuiste|foutieve|verkeerde) postcode|(?:postcode).{0,100}(?:pakket|bezorging|afleveren|bijwerken)/i,
       /(?:paket|pošiljk\w*|пакет|пошиљк\w*).{0,120}(?:zadržan|carin\w*|nije mogao biti isporučen|задржан|царин\w*|подлеже царинама)/i,
       /(?:paket|pošiljk\w*|пакет|пошиљк\w*).{0,120}(?:nepotpun\w* adres\w*|ažurir\w* podatk\w*|potvrd\w* adres\w*|непотпун\w* адрес\w*)/i,
+      /(?:paket|sendung|lieferung).{0,120}(?:sortierzentrum|verteilerzentrum|aufbewahrt|fehler aufgetreten).{0,120}(?:sendungsverfolgung|zollgebühr|weitere information|lieferung fortzusetzen)/i,
+      /(?:pošiljk\w*|posiljk\w*|paket|dostav\w*).{0,120}(?:neuspjel\w*|nije isporučen\w*|nije isporucen\w*|zadržan\w*|zadrzan\w*|carinsk\w* dažbin\w*|carinsk\w* dazbin\w*).{0,120}(?:plat|uplat|naknad|potvrd|ažurir|azurir|link|vez\w*|poveznic\w*)/i,
+      /(?:dhl).{0,30}(?:ваш пакет).{0,100}(?:чека|складишт\w*).{0,120}(?:потврдите|адрес\w*|платите|трошков\w*)/i,
+      /(?:ваш пакет).{0,120}(?:потврдите своју адресу).{0,100}(?:платите трошкове слања|започели испоруку)/i,
       /(?:shipping|handling|insurance).{0,80}(?:fee|\$\s?\d+|total due)/i,
       /customs.{0,25}(?:fee|charge|payment)/i,
     ],
@@ -217,6 +229,8 @@ export const categoryRules: Rule[] = [
       /pretend(?:ing)? to be/i,
       /(?:hallo\s+(?:mama|papa)|mama|papa).{0,100}(?:neue (?:handy)?nummer|handy ist kaputt|rechnung.{0,30}überweisen)/i,
       /(?:mama|tata|ćao|zdravo).{0,100}(?:novog broja|izgubio sam telefon|uplati.{0,30}dopunu)/i,
+      /(?:mein (?:telefon|handy) ist kaputt|telefon verloren).{0,100}(?:alte nummer löschen|neue nummer|speicher).{0,100}(?:whatsapp|schreib|überweis|geld)/i,
+      /(?:mama|tata|babo|otac|majka).{0,100}(?:novi broj|novog broja|telefon (?:mi je )?(?:pokvaren|izgubljen)).{0,120}(?:whatsapp|pošalj|posalj|uplat|novac|račun|racun)/i,
     ],
   },
   {
@@ -323,7 +337,7 @@ export const urgencyPatterns = [
   /expires? after \d+ (?:seconds?|minutes?)/i,
   /send (?:it|the code) fast/i,
   /will be (?:deleted|frozen|suspended|closed)/i,
-  /(?:dringend|sofort|unverz[uü]glich|innerhalb von \d+ (?:minuten|stunden))/i,
+  /(?:dringend|sofort|umgehend|unverz[uü]glich|innerhalb von \d+ (?:minuten|stunden))/i,
   /(?:urgente|inmediatamente|ahora mismo|dentro de \d+ (?:minutos|horas))/i,
   /(?:urgent|imm[ée]diatement|sans d[ée]lai|dans les \d+ (?:minutes|heures))/i,
   /(?:dringend|onmiddellijk|meteen|binnen \d+ (?:minuten|uur))/i,
@@ -368,6 +382,7 @@ export const credentialRequestPatterns = [
   /(?:envoy(?:ez|er)|partag(?:ez|er)|saisir|confirm(?:ez|er)|v(?:é|e|Ã©)rifi(?:ez|er|e)|mettre (?:à|a|Ã ) jour).{0,45}(?:mot de passe|identifiants|code de v(?:é|e|Ã©)rification|code d['’]acc(?:è|e|Ã¨)s)/i,
   /(?:stuur|deel|voer|bevestig|verifieer|werk bij).{0,45}(?:wachtwoord|inloggegevens|verificatiecode|toegangscode)/i,
   /(?:pošalji|podijeli|podeli|unesi|potvrdi|provjeri|proveri|ažuriraj).{0,45}(?:lozink|zapork|podatke za prijavu|verifikacijski kod|sigurnosni kod|bezbednosni kod|jednokratni kod)/i,
+  /(?:pošalj|posalj|podijel|podel|upiš|upis|unes|proslijed|prosled).{0,45}(?:kod|otp|pin|tan).{0,35}(?:potvrd|sigurn|bezbjed|bezbed|jednokrat)/i,
 ];
 
 export const routineAccountNoticePatterns = [
@@ -409,6 +424,8 @@ export const paymentPatterns = [
   /(?:unpaid|outstanding).{0,35}(?:toll|fine)|(?:toll|fine).{0,35}(?:pay|paid|payment|owe)/i,
   /(?:putarin\w*|kazn\w*).{0,45}(?:plati|uplat|izmir|dug)/i,
   /(?:offene forderung|ausstehend\w* betrag).{0,60}(?:bezahlen|zahlung)/i,
+  /(?:unbezahlte\w*|offene\w*).{0,35}(?:strafzettel|bußgeld|bussgeld).{0,60}(?:bezahlen|zahlen|begleichen)/i,
+  /(?:neplaćen\w*|neplacen\w*).{0,45}(?:kazn\w*|carinsk\w* dažbin\w*|carinsk\w* dazbin\w*|naknad\w*).{0,60}(?:plat|uplat|izmir)/i,
   /hourly rate/i,
   /(?:[uü]berweisung|geschenkkarte|gutschein|zahlung|kryptow[aä]hrung)/i,
   /(?:transferencia|tarjeta de regalo|pago|dep[oó]sito|criptomoneda)/i,
@@ -489,6 +506,8 @@ export const callToActionPatterns = [
   /(?:aktualisieren|bestätigen|verfolgen|folgen|abholen).{0,55}(?:adresse|angaben|sendung|lieferung|link|hier)|(?:hier).{0,30}(?:abholen|bestätigen)/i,
   /(?:erneuern|installieren|bezahlen|bestätigen).{0,60}(?:hier|app|konto|link|rückerstattung|betrag)|(?:hier).{0,30}(?:erneuern|installieren|bezahlen)/i,
   /(?:speichere|schreib).{0,45}(?:nummer|whatsapp)/i,
+  /(?:hier).{0,35}(?:registrieren|erneuern)|(?:registrieren|erneuern).{0,35}(?:hier|link)/i,
+  /(?:überprüfen|prüfen).{0,55}(?:sendungsverfolgung|transaktion|angaben).{0,55}(?:hier|link|anrufen|zahlen)/i,
   /(?:haga clic|abrir|confirmar|verificar|pagar|enviar).{0,45}(?:enlace|cuenta|datos|tarifa|c[oó]digo|pago)/i,
   /(?:cliquez|ouvrir|confirmer|v[ée]rifier|payer|envoyer).{0,45}(?:lien|compte|donn[ée]es|frais|code|paiement)/i,
   /(?:veuillez|merci de).{0,30}(?:choisir|vérifier|cliquer|contacter|appeler|confirmer)|(?:appelez|contactez).{0,45}(?:service|opposition|sécurité|\d)/i,
@@ -501,6 +520,7 @@ export const callToActionPatterns = [
   /(?:glasaj|glasati|podrži|подржи|гласај).{0,60}(?:link|takmičenj\w*|natjecanj\w*|whatsapp|prijav)/i,
   /(?:kliknite|platite|posjetite|posetite|potvrdite|provjerite|proverite|prijavite).{0,60}(?:link|kazn\w*|podatk\w*|kartic\w*|ovde|ovdje|paket)/i,
   /(?:javite se|javi se|pozovi me).{0,45}(?:broj|preuzeli|preuzeti)|uplati.{0,45}(?:dopunu|kredit)/i,
+  /(?:ako (?:ovo|to) niste vi|ukoliko (?:ovo|to) niste vi).{0,70}(?:pozov|kontaktir|klik|provjer|prover)/i,
   /(?:кликните|платите|посетите|потврдите|проверите|пријавите).{0,60}(?:линк|казн\w*|податк\w*|картиц\w*|пакет|https?:\/\/)/i,
 ];
 
@@ -513,6 +533,9 @@ export const impersonationPatterns = [
   /(?:banka|pošta|netflix|банка|пошта).{0,80}(?:nalog|račun|uplata|pretplat|paket|налог|рачун|уплата|претплат|пакет)/i,
   /(?:hallo\s+(?:mama|papa)|mama|papa).{0,100}(?:neue (?:handy)?nummer|handy ist kaputt)/i,
   /(?:mama|tata|ćao|zdravo).{0,100}(?:novog broja|izgubio sam telefon)/i,
+  /(?:sparkasse|volksbank|raiffeisen|deutsche bank|commerzbank).{0,100}(?:registrierung|konto|karte|pushtan|phototan)/i,
+  /(?:asa banka|raiffeisen|unicredit|nove banke|bh pošta|posta srpske|banka).{0,100}(?:račun|racun|kartic|pošiljk|posiljk|dostav|podat|transakcij)/i,
+  /(?:mein (?:telefon|handy) ist kaputt|telefon verloren).{0,100}(?:alte nummer löschen|neue nummer|speicher)/i,
 ];
 
 export const secrecyPatterns = [
