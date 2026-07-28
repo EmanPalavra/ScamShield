@@ -3,6 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { extractUrls, messageAnalysis, messageRuleAnalysis } from "../worker/scanner/message-analysis.ts";
+import type { EvaluationSample } from "./dataset-types.ts";
+import { languageHoldoutNegativeIds } from "./language-holdout-split.ts";
 
 const evaluationDir = path.dirname(fileURLToPath(import.meta.url));
 const rawDir = path.join(evaluationDir, "data", "raw");
@@ -79,9 +81,13 @@ function percent(value: number) {
 }
 
 const trainingHashes = new Set<string>();
-const generated = (await readFile(generatedPath, "utf8")).split(/\r?\n/).filter(Boolean);
-for (const line of generated) {
-  const row = JSON.parse(line) as { text: string };
+const generated = (await readFile(generatedPath, "utf8"))
+  .split(/\r?\n/)
+  .filter(Boolean)
+  .map((line) => JSON.parse(line) as EvaluationSample);
+const reservedLanguageHoldoutIds = languageHoldoutNegativeIds(generated);
+for (const row of generated) {
+  if (reservedLanguageHoldoutIds.has(row.id)) continue;
   trainingHashes.add(normalizedHash(row.text));
 }
 for (const filename of ["imc25-smishing.csv", "smishx-holdout.csv"]) {
@@ -125,12 +131,13 @@ const smishTankHybridHits = smishTankNovel.filter((row) => row.hybridAlert).leng
 const smishTankRuleRecall = smishTankRuleHits / Math.max(1, smishTankNovel.length);
 const smishTankHybridRecall = smishTankHybridHits / Math.max(1, smishTankNovel.length);
 
-const report = `# Final untouched holdout
+const report = `# Retained external holdout
 
 Generated: ${new Date().toISOString()}
 
-The model, threshold, integration policy, and application tests were locked before this dataset was scored.
-No result below may be used to retune the model without retiring this dataset as an untouched holdout.
+This dataset was frozen before its original score. The model was later retrained with template-separated multilingual
+augmentation, and its threshold was selected on internal validation rather than this report. Treat this as retained
+external evidence, not as a newly untouched score. No result below may be used for tuning.
 
 - Source: MOZ-Smishing (AfricaNLP 2025), crowd-sourced Mozambican mobile-money messages.
 - Language/domain: Portuguese from Mozambique; intentionally outside ScamShield's primary trained languages.

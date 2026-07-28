@@ -1,0 +1,96 @@
+{
+  "status": "frozen-before-multilingual-expansion",
+  "frozenAt": "2026-07-27T01:42:49.427Z",
+  "alertThreshold": 34,
+  "sourceSha256": "1bbd1e9e82c3ea023112207b80da268a5c4a07d2353c2b0898360ab037fa9a64",
+  "splitFingerprint": "5c55ea47d333bd45fff5d4209452416b78786405ab7a4b5d9aa17450160359bb",
+  "previousModelVersion": "local-logreg-3054e63c1d9f99ec",
+  "sampleCounts": {
+    "English": {
+      "scam": 400,
+      "legitimate": 400
+    },
+    "German": {
+      "scam": 400,
+      "legitimate": 400
+    },
+    "French": {
+      "scam": 400,
+      "legitimate": 400
+    },
+    "Dutch": {
+      "scam": 400,
+      "legitimate": 400
+    },
+    "Spanish": {
+      "scam": 400,
+      "legitimate": 400
+    },
+    "BHS": {
+      "scam": 11,
+      "legitimate": 11
+    }
+  },
+  "previousMetrics": {
+    "English": {
+      "tp": 332,
+      "fp": 0,
+      "tn": 400,
+      "fn": 68,
+      "precision": 1,
+      "recall": 0.83,
+      "f1": 0.9071038251366119
+    },
+    "German": {
+      "tp": 370,
+      "fp": 0,
+      "tn": 400,
+      "fn": 30,
+      "precision": 1,
+      "recall": 0.925,
+      "f1": 0.961038961038961
+    },
+    "French": {
+      "tp": 342,
+      "fp": 0,
+      "tn": 400,
+      "fn": 58,
+      "precision": 1,
+      "recall": 0.855,
+      "f1": 0.921832884097035
+    },
+    "Dutch": {
+      "tp": 377,
+      "fp": 0,
+      "tn": 400,
+      "fn": 23,
+      "precision": 1,
+      "recall": 0.9425,
+      "f1": 0.9703989703989705
+    },
+    "Spanish": {
+      "tp": 375,
+      "fp": 23,
+      "tn": 377,
+      "fn": 25,
+      "precision": 0.9422110552763819,
+      "recall": 0.9375,
+      "f1": 0.9398496240601504
+    },
+    "BHS": {
+      "tp": 6,
+      "fp": 0,
+      "tn": 11,
+      "fn": 5,
+      "precision": 1,
+      "recall": 0.5454545454545454,
+      "f1": 0.7058823529411764
+    }
+  },
+  "limitations": [
+    "The previous model had already seen IMC positives before this split was introduced.",
+    "The split is retained and source/template-separated for the new model, but is not a newly untouched corpus.",
+    "BHS has only the original Croatian and Serbian positives available in IMC and therefore remains a small sample.",
+    "BHS-specific rules were calibrated after the first retained score; BHS is development evidence only."
+  ]
+}

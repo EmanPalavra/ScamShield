@@ -97,7 +97,11 @@ test("renders the finished public product", async () => {
   assert.match(html, />BIH</);
   assert.match(html, />HRV</);
   assert.match(html, />SRB</);
-  assert.match(html, /class="theme-toggle"[^>]*data-i18n-skip/);
+  assert.match(html, /class="theme-toggle[^"]*"[^>]*data-i18n-skip/);
+  assert.doesNotMatch(html, /theme-toggle-label/);
+  assert.match(html, /class="settings-picker"/);
+  assert.match(html, /role="switch"[^>]*aria-checked="false"/);
+  assert.match(html, /Anonymous diagnostics/);
   assert.match(html, /<html[^>]*lang="en"[^>]*data-theme="dark"/);
 });
 
@@ -1012,5 +1016,54 @@ test("detects current authority-reported scam campaigns without flagging similar
     assert.equal(response.status, 200);
     const payload = await response.json();
     assert.equal(payload.riskLevel, "Low", language);
+  }
+});
+
+test("detects subtle German and BHS campaigns while preserving localized hard negatives", async () => {
+  const scams = [
+    ["German banking", "Ihre Registrierung für die Banking-to-go-App läuft in Kürze ab. Hier registrieren: https://example.invalid/banking"],
+    ["German delivery", "IHR PAKETZUSTELLER: Es ist ein Fehler aufgetreten. Überprüfen Sie Ihre Sendungsverfolgung und zahlen Sie die Zollgebühren, um die Lieferung fortzusetzen: https://example.invalid/paket"],
+    ["German fine", "Sie haben einen unbezahlten Strafzettel. Bitte bezahlen Sie ihn umgehend: https://example.invalid/strafe"],
+    ["German family", "Mein Telefon ist kaputt. Lösche meine alte Nummer, speichere diese hier und schreib mir auf WhatsApp."],
+    ["BHS banking", "ASA Banka: Vaša kartica je privremeno ograničena. Potvrdite podatke putem linka: https://example.invalid/kartica"],
+    ["BHS delivery", "BH Pošta: Pošiljka nije isporučena zbog neplaćenih carinskih dažbina. Platite naknadu: https://example.invalid/posta"],
+    ["BHS transaction", "Banka: Zabilježena je nepoznata transakcija. Ako ovo niste vi, pozovite broj 061123456."],
+    ["BHS family", "Mama, telefon mi je pokvaren i ovo je moj novi broj. Pošalji mi novac za račun."],
+    ["BHS Cyrillic delivery", "DHL: Ваш пакет чека у нашим складиштима. Потврдите своју адресу и платите трошкове слања да бисте започели испоруку."],
+    ["BHS Cyrillic subscription", "NTFX: Ваше последње задужење је одбијено. Да бисте наставили да користите наше услуге посетите портал."],
+  ];
+  const legitimate = [
+    ["German OTP", "Ihre TAN lautet 481920. Geben Sie TAN und Sicherheitscodes niemals an andere Personen weiter."],
+    ["German delivery", "Das Paket wurde heute erfolgreich an Ihrer Adresse zugestellt."],
+    ["German banking", "Ihre Kartenzahlung über 24,90 EUR wurde erfolgreich ausgeführt. Sie müssen nichts unternehmen."],
+    ["German family", "Meine neue Handynummer ist bereits im Familienchat gespeichert."],
+    ["BHS OTP", "Vaš jednokratni sigurnosni kod je 481920. Nikome ga ne dijelite."],
+    ["BHS delivery", "Paket je danas uspješno dostavljen na vašu adresu."],
+    ["BHS banking", "Kartična transakcija od 24,90 KM je uspješno izvršena. Nije potrebna nikakva radnja."],
+    ["BHS appointment", "Termin u banci je u utorak u 10 sati. Nije potrebno odgovoriti na poruku."],
+    ["BHS Cyrillic delivery", "Ваша пошиљка је успешно достављена на адресу."],
+    ["BHS Cyrillic OTP", "Ваш сигурносни код је 481920. Никоме га не делите."],
+  ];
+
+  for (const [index, [name, message]] of scams.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `198.51.100.${index + 160}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.match(payload.riskLevel, /^(Medium|High)$/, name);
+  }
+
+  for (const [index, [name, message]] of legitimate.entries()) {
+    const response = await request("/api/scan", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": `203.0.113.${index + 160}` },
+      body: JSON.stringify({ mode: "quick", message }),
+    });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.riskLevel, "Low", name);
   }
 });

@@ -1,0 +1,41 @@
+{
+  "status": "retired-invalid-source-field",
+  "retiredAt": "2026-07-27",
+  "retirementReason": "The scored SMS Translation field contains English translations rather than original DE/FR/NL message text; the BHS positive set was also too small for a reliable per-language claim.",
+  "frozenAt": "2026-07-27T01:05:30.1899497Z",
+  "baseGitCommit": "00f48a7affaf02e2349fbcbb3206f3442dd941c3",
+  "alertThreshold": 34,
+  "modelVersion": "local-logreg-35149699a5f95f3d",
+  "negativeSplit": {
+    "algorithm": "normalized-template-groups-sha256-v1",
+    "reservedPerLanguage": 400,
+    "languages": [
+      "English",
+      "German",
+      "French",
+      "Dutch",
+      "BHS"
+    ]
+  },
+  "sources": {
+    "spamHunter": {
+      "repository": "https://github.com/opmusic/SpamHunter_dataset",
+      "commit": "ee548cc9bb16629c764acc9d42d0f06d1cd51ae8",
+      "path": "train/tweet_spam_labeelled.csv",
+      "sha256": "181c47ae9e69156f722e6dfdf502b9827bcb3b0ecb30ed3c1d8f71d9304ee36e",
+      "acceptedCategory": "Fraud",
+      "acceptedLanguages": [
+        "en",
+        "de",
+        "fr",
+        "nl"
+      ]
+    },
+    "bhsExamples": {
+      "module": "evaluation/language-holdout-bhs.ts",
+      "sha256": "f5cfa2ea3c3bcd9c10d113b775214269d8fbb31270a862557b37a8c0ec824870",
+      "acceptedEvidence": "verbatim"
+    }
+  },
+  "policy": "No model, rule, threshold, feature, label, or sample change may be based on this holdout result. Any such change retires this manifest."
+}

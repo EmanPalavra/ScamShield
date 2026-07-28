@@ -1,0 +1,26 @@
+{
+  "status": "frozen-scored",
+  "frozenAt": "2026-07-27T02:33:56.306Z",
+  "frozenBeforeModel": "local-logreg-766c84b515acc503",
+  "firstScoredAt": "2026-07-27T02:34:26.791Z",
+  "firstScoredModel": "local-logreg-07c7960d472167ac",
+  "generatedDatasetSha256": "71cf262314024a75ec069a33a36dcf6321052a54eb6aa12e4e33c8dbed4094bc",
+  "fingerprint": "81e244f3db33be2436ed947b155c0ed5dd8507865b3f3190d3f6581ef5bb5f96",
+  "total": 700,
+  "scam": 100,
+  "legitimate": 600,
+  "counts": {
+    "authority-verbatim-redacted": 19,
+    "authority-described": 6,
+    "source-grounded-synthetic": 75,
+    "authentic-legitimate": 600
+  },
+  "policy": "The benchmark must not be used to change rules, features, labels, thresholds, or training data after its first score. Any such change retires this manifest.",
+  "limitations": [
+    "Only authority-verbatim rows are direct transcriptions of observed scam messages.",
+    "Authority-described rows summarize campaigns explicitly reported by the cited institution.",
+    "The 75 source-grounded challenge rows are synthetic and are reported separately from real-world rows.",
+    "Some real campaign families influenced rules before this formal freeze; the report must not call the real-world tier fully untouched.",
+    "Legitimate controls are authentic Bosnian SMS messages from the Sarajevo Corpus and are excluded from model training by complete normalized-template group."
+  ]
+}
