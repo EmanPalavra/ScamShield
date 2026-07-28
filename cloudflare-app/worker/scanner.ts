@@ -1,4 +1,5 @@
 import { analyzeDomainIntelligence, type DomainIntelligence } from "./domain-intelligence";
+import { sanitizeDiagnosticPayload, writeDiagnostic, type DiagnosticsEnv } from "./diagnostics";
 import type { RateLimitDecision, RateLimiter } from "./rate-limiter";
 import {
   authorityPatterns,
@@ -20,7 +21,7 @@ import {
 } from "./scanner/message-rules";
 import { extractUrls, messageAnalysis } from "./scanner/message-analysis";
 
-export interface ScannerEnv {
+export interface ScannerEnv extends DiagnosticsEnv {
   RATE_LIMITER: DurableObjectNamespace<RateLimiter>;
   GOOGLE_API_KEY?: string;
   VIRUSTOTAL_API_KEY?: string;
@@ -83,6 +84,7 @@ const MAX_URLS = 3;
 const MAX_URL_LENGTH = 2_048;
 const MAX_SCAN_BODY_BYTES = 48 * 1_024;
 const MAX_DEEP_BODY_BYTES = 8 * 1_024;
+const MAX_DIAGNOSTICS_BODY_BYTES = 4 * 1_024;
 const REQUEST_TIMEOUT_MS = 4_500;
 const PROVIDER_JSON_LIMIT_BYTES = 256 * 1_024;
 const STATUS_TOKEN_TTL_SECONDS = 30 * 60;
@@ -1097,6 +1099,48 @@ async function handleScan(request: Request, env: ScannerEnv, ctx?: ScannerContex
   return jsonResponse(result, 200, rateLimitHeaders(rate));
 }
 
+async function handleDiagnostics(request: Request, env: ScannerEnv) {
+  const parsedBody = await parseJsonObject(request, MAX_DIAGNOSTICS_BODY_BYTES);
+  if (parsedBody.response) return parsedBody.response;
+  const event = sanitizeDiagnosticPayload(parsedBody.body);
+  if (!event) {
+    return jsonResponse({ error: "Invalid anonymous diagnostic event." }, 400);
+  }
+
+  let rate;
+  try {
+    rate = await checkRateLimit(request, env, "diagnostics", 60, 60 * 60);
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "rate_limit_failed",
+      action: "diagnostics",
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    }));
+    return rateLimitUnavailable();
+  }
+  if (!rate.allowed) {
+    return jsonResponse(
+      { error: "Anonymous diagnostics limit reached. Try again later." },
+      429,
+      { ...rateLimitHeaders(rate), "retry-after": String(rate.retryAfter) },
+    );
+  }
+
+  try {
+    if (!writeDiagnostic(env, event)) {
+      return jsonResponse({ error: "Anonymous diagnostics are not configured." }, 503);
+    }
+    return jsonResponse({ recorded: true }, 202, rateLimitHeaders(rate));
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: "diagnostic_write_failed",
+      diagnosticType: event.event,
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    }));
+    return jsonResponse({ error: "Anonymous diagnostics are temporarily unavailable." }, 503);
+  }
+}
+
 async function handleDeepSubmit(request: Request, env: ScannerEnv) {
   const parsedBody = await parseJsonObject(request, MAX_DEEP_BODY_BYTES);
   if (parsedBody.response) return parsedBody.response;
@@ -1250,6 +1294,7 @@ export async function handleScannerApi(request: Request, env: ScannerEnv, ctx?: 
     "/health": "GET",
     "/api/config": "GET",
     "/api/scan": "POST",
+    "/api/diagnostics": "POST",
     "/api/deep/submit": "POST",
     "/api/deep/status": "GET",
   };
@@ -1257,10 +1302,11 @@ export async function handleScannerApi(request: Request, env: ScannerEnv, ctx?: 
   if (allowedMethod && request.method !== allowedMethod) {
     return jsonResponse({ error: "Method not allowed." }, 405, { allow: allowedMethod });
   }
-  if ((url.pathname === "/api/scan" || url.pathname === "/api/deep/submit") && !isTrustedWriteRequest(request)) {
+  if ((url.pathname === "/api/scan" || url.pathname === "/api/diagnostics" || url.pathname === "/api/deep/submit") && !isTrustedWriteRequest(request)) {
     return jsonResponse({ error: "Cross-site requests are not allowed." }, 403);
   }
   if (url.pathname === "/api/scan") return handleScan(request, env, ctx);
+  if (url.pathname === "/api/diagnostics") return handleDiagnostics(request, env);
   if (url.pathname === "/api/deep/submit") return handleDeepSubmit(request, env);
   if (url.pathname === "/api/deep/status") return handleDeepStatus(request, env);
   if (url.pathname.startsWith("/api/") || url.pathname === "/health") {

@@ -25,5 +25,11 @@
   },
   "images": {
     "binding": "IMAGES"
-  }
+  },
+  "analytics_engine_datasets": [
+    {
+      "binding": "DIAGNOSTICS",
+      "dataset": "DIAGNOSTICS"
+    }
+  ]
 }

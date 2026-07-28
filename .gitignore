@@ -1,9 +1,17 @@
 .env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
 venv/
 __pycache__/
 *.pyc
 .pnpm-store/
 data/phishtank_cache.json
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Local research notes
 /Scams.txt

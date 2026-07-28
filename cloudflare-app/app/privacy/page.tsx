@@ -6,6 +6,7 @@ export const metadata: Metadata = { title: "Privacy" };
 const sections = [
   { id: "submitted-data", label: "Submitted data" },
   { id: "retention", label: "Retention boundary" },
+  { id: "diagnostics", label: "Anonymous diagnostics" },
   { id: "providers", label: "External providers" },
   { id: "fresh-analysis", label: "Fresh analysis consent" },
 ];
@@ -47,8 +48,23 @@ export default function PrivacyPage() {
         </div>
       </section>
 
+      <section id="diagnostics">
+        <div className="info-number"><span>03</span><small>Optional</small></div>
+        <div className="info-section-copy">
+          <span className="info-section-label">Anonymous diagnostics</span>
+          <h2>Quality metrics are sent only after you opt in</h2>
+          <p>Anonymous diagnostics are disabled by default. If enabled in Settings, ScamShield records only the event type, scan mode, duration, broad result level, detected language, provider counts, and an optional structured result rating.</p>
+          <ul className="info-points">
+            <li>Messages, URLs, domains, IP addresses, account identifiers, and free-text comments are never written to the diagnostics dataset.</li>
+            <li>Cloudflare Analytics Engine retains these aggregate data points for three months.</li>
+            <li>User ratings are review signals only; they never become automatic training labels.</li>
+            <li>Turning diagnostics off prevents all future diagnostic and feedback submissions from the browser.</li>
+          </ul>
+        </div>
+      </section>
+
       <section id="providers">
-        <div className="info-number"><span>03</span><small>Sharing</small></div>
+        <div className="info-number"><span>04</span><small>Sharing</small></div>
         <div className="info-section-copy">
           <span className="info-section-label">URL enrichment</span>
           <h2>External services receive only the data needed for their check</h2>
@@ -62,7 +78,7 @@ export default function PrivacyPage() {
       </section>
 
       <section id="fresh-analysis">
-        <div className="info-number"><span>04</span><small>Consent</small></div>
+        <div className="info-number"><span>05</span><small>Consent</small></div>
         <div className="info-section-copy">
           <span className="info-section-label">Explicit external submission</span>
           <h2>A new VirusTotal analysis never starts automatically</h2>

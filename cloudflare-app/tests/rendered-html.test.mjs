@@ -119,6 +119,71 @@ test("returns health and security headers", async () => {
   assert.equal(payload.status, "ok");
 });
 
+test("records only allow-listed anonymous diagnostic fields after consent", async () => {
+  const points = [];
+  const diagnosticEnv = {
+    ...env,
+    DIAGNOSTICS: {
+      writeDataPoint(point) {
+        points.push(point);
+      },
+    },
+  };
+  const response = await request("/api/diagnostics", {
+    method: "POST",
+    headers: { "content-type": "application/json", "cf-connecting-ip": "198.51.100.61" },
+    body: JSON.stringify({
+      consent: true,
+      event: "result_feedback",
+      mode: "deep",
+      durationMs: 1842,
+      riskLevel: "High",
+      detectedLanguage: "Bosnian",
+      riskPercent: 91,
+      providerCompleted: 3,
+      providerTotal: 4,
+      linkCount: 1,
+      feedback: "should_be_safer",
+    }),
+  }, diagnosticEnv);
+
+  assert.equal(response.status, 202);
+  assert.deepEqual(await response.json(), { recorded: true });
+  assert.equal(points.length, 1);
+  assert.deepEqual(points[0].indexes, ["result_feedback"]);
+  assert.deepEqual(points[0].blobs, ["v1", "result_feedback", "deep", "High", "Bosnian", "should_be_safer", "none"]);
+  assert.deepEqual(points[0].doubles, [1842, 91, 3, 4, 1]);
+  assert.doesNotMatch(JSON.stringify(points[0]), /198\.51\.100\.61|message|url/i);
+});
+
+test("rejects diagnostic payloads without consent or with content fields", async () => {
+  const points = [];
+  const diagnosticEnv = {
+    ...env,
+    DIAGNOSTICS: { writeDataPoint: (point) => points.push(point) },
+  };
+  const withoutConsent = await request("/api/diagnostics", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ event: "scan_error", mode: "quick", durationMs: 20, errorCategory: "network" }),
+  }, diagnosticEnv);
+  assert.equal(withoutConsent.status, 400);
+
+  const withMessage = await request("/api/diagnostics", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      consent: true,
+      event: "scan_complete",
+      mode: "quick",
+      durationMs: 20,
+      message: "private input",
+    }),
+  }, diagnosticEnv);
+  assert.equal(withMessage.status, 400);
+  assert.equal(points.length, 0);
+});
+
 test("does not derive public metadata from untrusted forwarded hosts", async () => {
   const response = await request("/", { headers: { accept: "text/html", "x-forwarded-host": "attacker.example" } });
   assert.equal(response.status, 200);
