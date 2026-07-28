@@ -183,6 +183,31 @@
   .result-metrics article {
     padding: 13px;
   }
+
+  .result-feedback {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .result-feedback {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-actions {
+    justify-content: flex-start;
+  }
+
+  .result-feedback > small,
+  .feedback-status.error {
+    grid-column: 1;
+    text-align: left;
+  }
+
+  .feedback-disabled,
+  .feedback-status {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 360px) {

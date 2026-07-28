@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { setDiagnosticsEnabled, useDiagnosticsEnabled } from "./diagnostics";
 import { useLanguage } from "./i18n";
 import { supportedLocales } from "./translations";
 
 const THEME_STORAGE_KEY = "scamshield-theme";
 const THEME_CHANGE_EVENT = "scamshield-theme-change";
-const DIAGNOSTICS_STORAGE_KEY = "scamshield-anonymous-diagnostics";
-const DIAGNOSTICS_CHANGE_EVENT = "scamshield-diagnostics-change";
 
 type Theme = "light" | "dark";
 
@@ -75,22 +74,9 @@ function subscribeToTheme(onStoreChange: () => void) {
   };
 }
 
-function getDiagnosticsSnapshot() {
-  return window.localStorage.getItem(DIAGNOSTICS_STORAGE_KEY) === "enabled";
-}
-
-function subscribeToDiagnostics(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  window.addEventListener(DIAGNOSTICS_CHANGE_EVENT, onStoreChange);
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-    window.removeEventListener(DIAGNOSTICS_CHANGE_EVENT, onStoreChange);
-  };
-}
-
 export function SiteHeader({ activePath }: { activePath?: string }) {
   const theme = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, () => "dark");
-  const diagnosticsEnabled = useSyncExternalStore(subscribeToDiagnostics, getDiagnosticsSnapshot, () => false);
+  const diagnosticsEnabled = useDiagnosticsEnabled();
   const { locale, setLocale, t } = useLanguage();
   const languageMenuRef = useRef<HTMLDetailsElement>(null);
   const settingsMenuRef = useRef<HTMLDetailsElement>(null);
@@ -129,8 +115,7 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
   }
 
   function toggleDiagnostics() {
-    window.localStorage.setItem(DIAGNOSTICS_STORAGE_KEY, diagnosticsEnabled ? "disabled" : "enabled");
-    window.dispatchEvent(new Event(DIAGNOSTICS_CHANGE_EVENT));
+    setDiagnosticsEnabled(!diagnosticsEnabled);
   }
 
   return (
@@ -239,7 +224,7 @@ export function SiteHeader({ activePath }: { activePath?: string }) {
               >
                 <span className="diagnostics-copy">
                   <strong>{t("Anonymous diagnostics")}</strong>
-                  <small>{t("Only errors and scan duration. Never messages, URLs, or IP addresses.")}</small>
+                  <small>{t("Only errors, scan duration, and optional result feedback. Messages, URLs, and IP addresses are never stored.")}</small>
                 </span>
                 <span className="settings-switch" aria-hidden="true"><i /></span>
               </button>

@@ -2,6 +2,7 @@
 
 import type { CSSProperties, FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { sendAnonymousDiagnostic, useDiagnosticsEnabled } from "./diagnostics";
 import { ScamShieldLogoMark, SiteFooter, SiteHeader } from "./site-chrome";
 import { DeepScanPanel } from "./scanner/DeepScanPanel";
 import { useLanguage } from "./i18n";
@@ -71,6 +72,7 @@ function wait(milliseconds: number, signal: AbortSignal) {
 
 export function ScanApp() {
   const { locale, t } = useLanguage();
+  const diagnosticsEnabled = useDiagnosticsEnabled();
   const [message, setMessage] = useState("");
   const [view, setView] = useState<"simple" | "analyst">("simple");
   const [activeTab, setActiveTab] = useState<AnalystTab>("Evidence");
@@ -88,6 +90,7 @@ export function ScanApp() {
   const [deepSubmitting, setDeepSubmitting] = useState(false);
   const [deepTracking, setDeepTracking] = useState(false);
   const [deepElapsedSeconds, setDeepElapsedSeconds] = useState(0);
+  const [feedbackState, setFeedbackState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const turnstileContainer = useRef<HTMLDivElement>(null);
   const turnstileWidgetId = useRef<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
@@ -212,10 +215,14 @@ export function ScanApp() {
     setDeepTracking(false);
     setDeepElapsedSeconds(0);
     setProgressStep(0);
+    setFeedbackState("idle");
     resetTurnstile();
   }
 
   async function runScan(mode: "quick" | "deep") {
+    const startedAt = performance.now();
+    let responseStatus: number | null = null;
+    let responseDecoded = false;
     const clean = message.trim();
     if (!clean) {
       setError("Paste a message or link before starting a scan.");
@@ -235,18 +242,47 @@ export function ScanApp() {
     setResult(null);
     setConsent(false);
     setDeepJob(null);
+    setFeedbackState("idle");
     try {
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: clean, mode, turnstileToken, sensitiveUrlConsent }),
       });
+      responseStatus = response.status;
       const payload = (await response.json()) as ScanResult & { error?: string };
+      responseDecoded = true;
       if (!response.ok) throw new Error(payload.error ?? "The scan could not be completed.");
       setResult(payload);
       setSelectedDeepUrl(payload.deepScan.urls[0] ?? "");
+      void sendAnonymousDiagnostic({
+        event: "scan_complete",
+        mode,
+        durationMs: Math.round(performance.now() - startedAt),
+        riskLevel: payload.riskLevel,
+        detectedLanguage: payload.analysis.detectedLanguage,
+        riskPercent: payload.riskPercent,
+        providerCompleted: payload.analysis.providerCoverage.completed,
+        providerTotal: payload.analysis.providerCoverage.total,
+        linkCount: payload.links.length,
+      });
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : "The scan could not be completed.");
+      const errorCategory = responseStatus === null
+        ? "network"
+        : !responseDecoded
+          ? "invalid_response"
+          : responseStatus >= 500
+            ? "http_5xx"
+            : responseStatus >= 400
+              ? "http_4xx"
+              : "unknown";
+      void sendAnonymousDiagnostic({
+        event: "scan_error",
+        mode,
+        durationMs: Math.round(performance.now() - startedAt),
+        errorCategory,
+      });
     } finally {
       setLoadingMode(null);
       resetTurnstile();
@@ -256,6 +292,24 @@ export function ScanApp() {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void runScan("quick");
+  }
+
+  async function submitResultFeedback(feedback: "correct" | "should_be_safer" | "should_be_riskier") {
+    if (!result || !diagnosticsEnabled || feedbackState === "sending" || feedbackState === "sent") return;
+    setFeedbackState("sending");
+    const recorded = await sendAnonymousDiagnostic({
+      event: "result_feedback",
+      mode: result.scanMode,
+      durationMs: result.analysis.timing.totalMs,
+      riskLevel: result.riskLevel,
+      detectedLanguage: result.analysis.detectedLanguage,
+      riskPercent: result.riskPercent,
+      providerCompleted: result.analysis.providerCoverage.completed,
+      providerTotal: result.analysis.providerCoverage.total,
+      linkCount: result.links.length,
+      feedback,
+    });
+    setFeedbackState(recorded ? "sent" : "error");
   }
 
   async function copyReport() {
@@ -784,6 +838,34 @@ export function ScanApp() {
                 )}
               </div>
             )}
+
+            <section className="result-feedback" aria-labelledby="result-feedback-title">
+              <div className="feedback-copy">
+                <span className="feedback-icon" aria-hidden="true">✓</span>
+                <div>
+                  <h3 id="result-feedback-title">{t("Was this result useful?")}</h3>
+                  <p>{t("Optional feedback contains only the result category and performance metrics—never your message or URL.")}</p>
+                </div>
+              </div>
+              {feedbackState === "sent" ? (
+                <div className="feedback-status success" role="status">{t("Thanks—your anonymous feedback was recorded.")}</div>
+              ) : diagnosticsEnabled ? (
+                <>
+                  <div className="feedback-actions" aria-label={t("Rate this result")}>
+                    <button type="button" disabled={feedbackState === "sending"} onClick={() => void submitResultFeedback("correct")}>{t("Looks correct")}</button>
+                    <button type="button" disabled={feedbackState === "sending"} onClick={() => void submitResultFeedback("should_be_safer")}>{t("Should be safer")}</button>
+                    <button type="button" disabled={feedbackState === "sending"} onClick={() => void submitResultFeedback("should_be_riskier")}>{t("Should be riskier")}</button>
+                  </div>
+                  <small>{t("Feedback is a review signal, not an automatic training label.")}</small>
+                  {feedbackState === "error" && <div className="feedback-status error" role="alert">{t("Feedback could not be sent. Try again.")}</div>}
+                </>
+              ) : (
+                <div className="feedback-disabled">
+                  <span>{t("Enable anonymous diagnostics in Settings to share feedback.")}</span>
+                  <small>{t("Nothing is sent while diagnostics are disabled.")}</small>
+                </div>
+              )}
+            </section>
 
             <DeepScanPanel
               result={result}
